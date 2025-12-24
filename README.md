@@ -23,14 +23,25 @@ Damn fast Linux-based IPoE NAS/BRAS/BNG implementation
 - **rscriptd integration**
 
 
-## Initial setup
+## Initial setup 
 
-### Install required software
+### Debian 13.2 Trixie
 
 ```
+su -
 apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny
 apt install -y git expat libexpat1-dev build-essential softflowd snmpd snmp
 apt install -y php8.4-cli php8.4-mysqli php8.4-mbstring php8.4-bcmath php8.4-curl
+apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev
+```
+
+
+### Ubuntu Server 24.04 (Not tested yet)
+```
+sudo bash
+apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny
+apt install -y git expat libexpat1-dev build-essential softflowd snmpd snmp
+apt install -y php8.3-cli php8.3-mysqli php8.3-mbstring php8.3-bcmath php8.3-curl
 apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev
 ```
 
@@ -154,7 +165,7 @@ cp -R /etc/PureNAS/dist/99-nat-tuning.conf /etc/sysctl.d/
 sysctl -p /etc/sysctl.d/99-nat-tuning.conf
 ```
 
-## Kernel rebuild
+## Kernel rebuild (Required on Debian)
 
 ```
 KVER="$(uname -r | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
