@@ -87,7 +87,7 @@ git clone https://github.com/nightflyza/PureNAS.git /etc/PureNAS
 
 2. **Initialize** the system:
    ```bash
-   sudo /etc/PureNAS/init
+   /etc/PureNAS/init
    ```
 
 3. **Manage subscribers**:
