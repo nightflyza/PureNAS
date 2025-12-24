@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <IP_ADDRESS>" >&2
+    exit 1
+fi
+
+IP="$1"
+
+nft delete element ${NFT_FAMILY} ${NFT_TABLE} ${NFT_INACTIVE_SET} { ${IP} } >/dev/null 2>&1 || true
+
+nft add element ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} { ${IP} } 2>/dev/null || {
+    echo "Error: Failed to add ${IP} to ${NFT_ACTIVE_SET} set" >&2
+    exit 1
+}
+
+echo "== Added ${IP} to ${NFT_ACTIVE_SET} set =="
+

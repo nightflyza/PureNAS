@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -e
+
+IP="$1"
+MAC="$2"
+arpcmd="/usr/sbin/arp"
+
+if [ -z "$IP" ] || [ -z "$MAC" ]; then
+    echo "Usage: $0 <IP_ADDRESS> <MAC_ADDRESS>"
+    exit 1
+fi
+
+${arpcmd} -s ${IP} ${MAC}
+
+echo "== Added static ARP entry for ${IP} with MAC ${MAC} =="

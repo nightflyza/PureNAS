@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+IP="$1"
+DOWN="$2"
+UP="$3"
+
+# interface used as user gateway
+if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+    USER_GW_IF="${BRIDGE_NAME}"
+else
+    USER_GW_IF="${LAN_IF}"
+fi
+
+if [ -z "$IP" ] || [ -z "$DOWN" ]; then
+    echo "Usage: $0 <IP_ADDRESS> <DOWNLOAD_KBIT> [UPLOAD_KBIT]"
+    exit 1
+fi
+
+if [ -z "$UP" ]; then
+    UP="$DOWN"
+fi
+
+if [ "$DOWN" = "0" ]; then
+    echo "No shaping for ${IP} (speed is 0)"
+    exit 0
+fi
+
+IP_HASH=$("${SCRIPT_DIR}/../lib/calcmark" "$IP")
+HASH_HEX=$(printf "%x" $IP_HASH)
+CLASSID="1:${IP_HASH}"
+CLASSID_HEX="1:0x${HASH_HEX}"
+
+IFS=. read -r _ _ O3 O4 <<< "$IP"
+TABLE_ID=$(printf "%02x" $((O3+1)))
+BUCKET_HEX=$(printf "%x" $O4)
+FILTER_ID=$(((IP_HASH + 1) & 4095))
+FILTER_ID_HEX=$(printf "%x" $FILTER_ID)
+FULL_HANDLE_FILTER="${TABLE_ID}:${BUCKET_HEX}:${FILTER_ID_HEX}"
+
+#dynamic burst calculation
+TIME_MS=50
+MIN_BURST_BYTES=$((64 * 1024))
+MAX_BURST_BYTES=$((6 * 1024 * 1024))
+
+calculate_burst() {
+    _spd_kbit="$1"
+    _burst_res=1680
+    _burst_res=$(( (_spd_kbit * TIME_MS) / 8 ))
+    if [ "$_burst_res" -lt "$MIN_BURST_BYTES" ]; then
+        _burst_res="$MIN_BURST_BYTES"
+    fi
+    
+    if [ "$_burst_res" -gt "$MAX_BURST_BYTES" ]; then
+        _burst_res="$MAX_BURST_BYTES"
+    fi
+    
+    echo "$_burst_res"
+}
+
+BURST_D=$(calculate_burst $DOWN)
+BURST_U=$(calculate_burst $UP)
+
+tc class del dev ${IFB_IF} parent 1:0 classid $CLASSID_HEX 2>/dev/null || true
+#echo "== Creating upload class on ${IFB_IF} with rate ${UP}kbit (UP=${UP}, DOWN=${DOWN}) =="
+tc class add dev ${IFB_IF} parent 1:0 classid $CLASSID_HEX \
+    htb rate ${UP}kbit ceil ${UP}kbit \
+    burst ${BURST_U} cburst ${BURST_U} \
+    quantum 65535
+
+tc qdisc del dev ${IFB_IF} parent $CLASSID_HEX 2>/dev/null || true
+tc qdisc add dev ${IFB_IF} parent $CLASSID_HEX handle ${HASH_HEX} fq_codel flows 1024 limit 2048
+
+tc class del dev ${USER_GW_IF} parent 1:0 classid $CLASSID_HEX 2>/dev/null || true
+#echo "== Creating download class on ${USER_GW_IF} with rate ${DOWN}kbit (UP=${UP}, DOWN=${DOWN}) =="
+tc class add dev ${USER_GW_IF} parent 1:0 classid $CLASSID_HEX \
+    htb rate ${DOWN}kbit ceil ${DOWN}kbit \
+    burst ${BURST_D} cburst ${BURST_D} \
+    quantum 65535
+
+tc qdisc del dev ${USER_GW_IF} parent $CLASSID_HEX 2>/dev/null || true
+tc qdisc add dev ${USER_GW_IF} parent $CLASSID_HEX handle ${HASH_HEX} fq_codel flows 1024 limit 2048
+
+tc filter del dev ${IFB_IF} parent 1: protocol ip prio 3 handle ${FULL_HANDLE_FILTER} u32 2>/dev/null || true
+tc filter add dev ${IFB_IF} parent 1: protocol ip prio 3 \
+    handle ${FULL_HANDLE_FILTER} \
+    u32 ht ${TABLE_ID}:${BUCKET_HEX}: \
+    match ip src ${IP}/32 \
+    flowid $CLASSID_HEX
+
+tc filter del dev ${USER_GW_IF} parent 1: protocol ip prio 3 handle ${FULL_HANDLE_FILTER} u32 2>/dev/null || true
+tc filter add dev ${USER_GW_IF} parent 1: protocol ip prio 3 \
+    handle ${FULL_HANDLE_FILTER} \
+    u32 ht ${TABLE_ID}:${BUCKET_HEX}: \
+    match ip dst ${IP}/32 \
+    flowid $CLASSID_HEX
+
+echo "== SHAPED: ${IP}  DOWN=${DOWN}kbit  UP=${UP}kbit  CLASSID=${CLASSID}/${CLASSID_HEX} =="

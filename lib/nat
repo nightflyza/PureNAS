@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${NAT_ENABLED}" = "YES" ]; then
+echo "== Configuring NAT =="
+
+if nft list chain ${NFT_FAMILY} ${NFT_TABLE} postrouting >/dev/null 2>&1; then
+    nft flush chain ${NFT_FAMILY} ${NFT_TABLE} postrouting 2>/dev/null || true
+else
+    if [ "${POOL_NAT_ENABLED}" = "YES" ] && [ -n "${POOL_NAT_NETS:-}" ]; then
+        nft add chain ${NFT_FAMILY} ${NFT_TABLE} postrouting '{ type nat hook postrouting priority srcnat; policy accept; }'
+    else
+        nft add chain ${NFT_FAMILY} ${NFT_TABLE} postrouting '{ type nat hook postrouting priority 100; policy accept; }'
+    fi
+fi
+
+if [ "${POOL_NAT_ENABLED}" = "YES" ] && [ -n "${POOL_NAT_NETS:-}" ]; then
+    echo "== Configuring SNAT pools =="
+    for net in ${POOL_NAT_NETS}; do
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} postrouting oifname "${WAN_IF}" ip saddr @users_networks snat to ${net} 2>/dev/null || true
+    done
+else
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} postrouting oifname "${WAN_IF}" ip saddr @users_networks masquerade 2>/dev/null || true
+fi
+
+fi

@@ -1,0 +1,382 @@
+#!/usr/bin/php
+<?php
+
+$banner="
+ _   _       _           _       _____ _               _             
+| | | |     | |         | |     /  __ \ |             | |            
+| | | |_ __ | |__   ___ | |_   _| /  \/ |__   ___  ___| | _____ _ __ 
+| | | | '_ \| '_ \ / _ \| | | | | |   | '_ \ / _ \/ __| |/ / _ \ '__|
+| |_| | | | | | | | (_) | | |_| | \__/\ | | |  __/ (__|   <  __/ |   
+ \___/|_| |_|_| |_|\___/|_|\__, |\____/_| |_|\___|\___|_|\_\___|_|   
+                            __/ |                                    
+                           |___/                                     
+";
+
+if (php_sapi_name() !== 'cli') {
+    fwrite(STDERR, 'Error: This script can only be executed from command line'.PHP_EOL);
+    exit(1);
+}
+
+$uid = posix_geteuid();
+if ($uid !== 0) {
+    fwrite(STDERR, 'Error: This script must be run as root'.PHP_EOL);
+    exit(1);
+}
+
+$scriptDir = dirname(__FILE__);
+$configFile = $scriptDir . '/../purenas.conf';
+$libFile = $scriptDir . '/../lib/puritylib.php';
+
+if (!file_exists($configFile)) {
+    fwrite(STDERR, 'Error: purenas.conf not found'.PHP_EOL);
+    exit(1);
+}
+
+require_once($libFile);
+
+$config = parseConfig($configFile);
+$requiredOptions=array('VLAN_BRIDGE_ENABLED', 'BRIDGE_NAME', 'LAN_IF', 'IFB_IF', 'NFT_FAMILY', 'NFT_TABLE', 'NFT_ACTIVE_SET', 'NFT_INACTIVE_SET');
+
+foreach ($requiredOptions as $option) {
+    if (!isset($config[$option])) {
+        fwrite(STDERR, 'Error: '.$option.' not found in purenas.conf'.PHP_EOL);
+        exit(1);
+    }
+}
+
+$filterIP = null;
+if (isset($argv[1]) and !empty($argv[1])) {
+    if (preg_match('/^(\d+\.\d+\.\d+\.\d+)$/', $argv[1], $matches)) {
+        $filterIP = $matches[1];
+    } else {
+        fwrite(STDERR, 'Error: Invalid IP address format: '.$argv[1].PHP_EOL);
+        exit(1);
+    }
+}
+
+$vlanBridgeEnabled = $config['VLAN_BRIDGE_ENABLED'];
+if ($vlanBridgeEnabled === 'YES') {
+    $userGwIf = $config['BRIDGE_NAME'];
+} else {
+    $userGwIf = $config['LAN_IF'];
+}
+
+$ifbIf = $config['IFB_IF'];
+$nftFamily = $config['NFT_FAMILY'];
+$nftTable = $config['NFT_TABLE'];
+$nftSet = $config['NFT_ACTIVE_SET'];
+$nftInactiveSet = $config['NFT_INACTIVE_SET'];
+
+$activeIPs = getActiveSubscribers($nftFamily, $nftTable, $nftSet);
+$inactiveIPs = getActiveSubscribers($nftFamily, $nftTable, $nftInactiveSet);
+$allClasses = getAllTcClasses($userGwIf, $ifbIf);
+$allQdiscs = getAllTcQdiscs($userGwIf, $ifbIf);
+$allFilters = getAllTcFilters($userGwIf, $ifbIf);
+
+$ipToHash = array();
+foreach ($activeIPs as $ip) {
+    $ipToHash[$ip] = calculateHash($ip);
+}
+
+$hashToIP = array_flip($ipToHash);
+
+$classesByHash = array();
+$handleToHash = array();
+foreach ($allClasses as $class) {
+    $classid = isset($class['classid']) ? $class['classid'] : '';
+    $originalHandle = isset($class['original_handle']) ? $class['original_handle'] : $classid;
+    $hash = null;
+    $actualHash = null;
+    
+    if (preg_match('/^1:0x([0-9a-f]+)$/i', $classid, $matches)) {
+        $hash = hexdec($matches[1]);
+        $actualHash = $hash;
+    } elseif (preg_match('/^1:(\d+)$/', $classid, $matches)) {
+        $hash = (int)$matches[1];
+        $actualHash = $hash;
+    }
+    
+    if ($hash !== null) {
+        $handleToHash[$classid] = $actualHash;
+        if ($originalHandle !== $classid) {
+            $handleToHash[$originalHandle] = $actualHash;
+        }
+        if (!isset($classesByHash[$actualHash])) {
+            $classesByHash[$actualHash] = array();
+        }
+        $classesByHash[$actualHash][] = $class;
+    }
+}
+
+$qdiscsByHash = array();
+foreach ($allQdiscs as $qdisc) {
+    $parent = isset($qdisc['parent']) ? $qdisc['parent'] : '';
+    $hash = null;
+    
+    if (isset($handleToHash[$parent])) {
+        $hash = $handleToHash[$parent];
+    } elseif (preg_match('/^1:0x([0-9a-f]+)$/i', $parent, $matches)) {
+        $hash = hexdec($matches[1]);
+    } elseif (preg_match('/^1:([0-9a-f]+)$/i', $parent, $matches)) {
+        $hash = hexdec($matches[1]);
+    } elseif (preg_match('/^1:(\d+)$/', $parent, $matches)) {
+        $hash = (int)$matches[1];
+    }
+    
+    if ($hash !== null) {
+        if (!isset($qdiscsByHash[$hash])) {
+            $qdiscsByHash[$hash] = array();
+        }
+        $qdiscsByHash[$hash][] = $qdisc;
+    }
+}
+
+$filtersByHash = array();
+foreach ($allFilters as $filter) {
+    $details = isset($filter['details']) ? $filter['details'] : '';
+    $hash = null;
+    
+    if (preg_match('/flowid (1:0x[0-9a-f]+|1:[0-9a-f]+|1:\d+)/i', $details, $matches)) {
+        $flowid = $matches[1];
+        if (isset($handleToHash[$flowid])) {
+            $hash = $handleToHash[$flowid];
+        } else {
+            if (preg_match('/flowid 1:0x([0-9a-f]+)/i', $details, $m)) {
+                $hash = hexdec($m[1]);
+            } elseif (preg_match('/flowid 1:([0-9a-f]+)/i', $details, $m)) {
+                $hash = hexdec($m[1]);
+            } elseif (preg_match('/flowid 1:(\d+)/', $details, $m)) {
+                $hash = (int)$m[1];
+            }
+            if ($hash !== null) {
+                $normalizedFlowid = '1:0x'.dechex($hash);
+                if (isset($handleToHash[$normalizedFlowid])) {
+                    $hash = $handleToHash[$normalizedFlowid];
+                }
+            }
+        }
+    }
+    
+    if ($hash !== null) {
+        if (!isset($filtersByHash[$hash])) {
+            $filtersByHash[$hash] = array();
+        }
+        $filtersByHash[$hash][] = $filter;
+    }
+}
+
+$allHashes = array_unique(array_merge(
+    array_keys($hashToIP),
+    array_keys($classesByHash),
+    array_keys($qdiscsByHash),
+    array_keys($filtersByHash)
+));
+
+sort($allHashes);
+
+if ($filterIP !== null) {
+    if (!isset($ipToHash[$filterIP])) {
+        fwrite(STDERR, 'Error: IP address '.$filterIP.' is not in active subscribers list'.PHP_EOL);
+        exit(1);
+    }
+    $filterHash = $ipToHash[$filterIP];
+    $allHashes = array($filterHash);
+    if (isset($classesByHash[65535])) {
+        $allHashes[] = 65535;
+    }
+    if (isset($classesByHash[65520])) {
+        $allHashes[] = 65520;
+    }
+    $allHashes = array_unique($allHashes);
+    sort($allHashes);
+}
+
+print($banner.PHP_EOL);
+print('=== Subscribers Tree Debugger ==='.PHP_EOL);
+print('Usage: '.basename(__FILE__).' [IP_ADDRESS] - Filter by specific IP address'.PHP_EOL.PHP_EOL);
+if ($filterIP !== null) {
+    print('Filtering for IP: '.$filterIP.PHP_EOL);
+}
+print('Interfaces: '.$userGwIf.' (download), '.$ifbIf.' (upload)'.PHP_EOL);
+print('Active subscribers: '.count($activeIPs).PHP_EOL);
+print('Inactive subscribers: '.count($inactiveIPs).PHP_EOL);
+print('Total classes found: '.count($allHashes).PHP_EOL.PHP_EOL);
+
+foreach ($allHashes as $hash) {
+    $ip = isset($hashToIP[$hash]) ? $hashToIP[$hash] : null;
+    $hashHex = dechex($hash);
+    $classid = '1:'.$hash;
+    $classidHex = '1:0x'.$hashHex;
+    
+    $isDefault = ($hash === 65535 or $hash === 65520);
+    
+    if ($ip) {
+        print('┌─ IP: '.$ip.' [ACTIVE]'.PHP_EOL);
+    } elseif ($isDefault) {
+        print('┌─ Hash: '.$hash.' (0x'.$hashHex.') [DEFAULT]'.PHP_EOL);
+    } else {
+        print('┌─ Hash: '.$hash.' (0x'.$hashHex.') [ORPHAN - not in active set]'.PHP_EOL);
+    }
+    
+    print('│  ClassID: '.$classid.' / '.$classidHex.PHP_EOL);
+    
+    $downRate = 'unlimited';
+    $upRate = 'unlimited';
+    if (isset($classesByHash[$hash])) {
+        foreach ($classesByHash[$hash] as $class) {
+            $dev = $class['dev'];
+            $rate = isset($class['rate']) ? $class['rate'] : null;
+            if ($rate !== null and $rate !== 'N/A') {
+                $formattedRate = formatRate($rate);
+                if ($dev === $ifbIf) {
+                    $upRate = $formattedRate;
+                } else {
+                    $downRate = $formattedRate;
+                }
+            }
+        }
+    }
+    print('│  Speeds: '.$downRate.'/'.$upRate.' (DOWN/UP)'.PHP_EOL);
+    
+    $hasClasses = isset($classesByHash[$hash]);
+    $hasQdiscs = isset($qdiscsByHash[$hash]);
+    $hasFilters = isset($filtersByHash[$hash]);
+    
+    if ($hasClasses) {
+        $classCount = 0;
+        foreach ($classesByHash[$hash] as $class) {
+            $classCount++;
+            $rate = isset($class['rate']) ? $class['rate'] : 'N/A';
+            $ceil = isset($class['ceil']) ? $class['ceil'] : 'N/A';
+            $burst = isset($class['burst']) ? $class['burst'] : 'N/A';
+            $cburst = isset($class['cburst']) ? $class['cburst'] : 'N/A';
+            $dev = $class['dev'];
+            $direction = ($dev === $ifbIf) ? 'UPLOAD' : 'DOWNLOAD';
+            $isLastClass = ($classCount === count($classesByHash[$hash]));
+            $prefix = $isLastClass and !$hasQdiscs and !$hasFilters ? '└' : '├';
+            print('│  '.$prefix.'─ Class ['.$direction.'] on '.$dev.PHP_EOL);
+            $nextPrefix = ($isLastClass and !$hasQdiscs and !$hasFilters) ? '   ' : '│  ';
+            $rateFormatted = ($rate !== 'N/A' and is_numeric($rate)) ? formatRate($rate) : $rate;
+            $ceilFormatted = ($ceil !== 'N/A' and is_numeric($ceil)) ? formatRate($ceil) : $ceil;
+            print($nextPrefix.'  ├─ Rate: '.$rateFormatted.PHP_EOL);
+            print($nextPrefix.'  ├─ Ceil: '.$ceilFormatted.PHP_EOL);
+            $hasBurst = ($burst !== 'N/A' and is_numeric($burst));
+            $hasCBurst = ($cburst !== 'N/A' and is_numeric($cburst));
+            if ($hasBurst) {
+                $burstFormatted = formatBytes($burst);
+                if ($hasCBurst) {
+                    print($nextPrefix.'  ├─ Burst: '.$burstFormatted.PHP_EOL);
+                } else {
+                    print($nextPrefix.'  └─ Burst: '.$burstFormatted.PHP_EOL);
+                }
+            }
+            if ($hasCBurst) {
+                $cburstFormatted = formatBytes($cburst);
+                print($nextPrefix.'  └─ CBurst: '.$cburstFormatted.PHP_EOL);
+            }
+        }
+    } else {
+        $prefix = !$hasQdiscs and !$hasFilters ? '└' : '├';
+        print('│  '.$prefix.'─ Class: NOT FOUND'.PHP_EOL);
+    }
+    
+    if ($hasQdiscs) {
+        $qdiscCount = 0;
+        foreach ($qdiscsByHash[$hash] as $qdisc) {
+            $qdiscCount++;
+            $dev = $qdisc['dev'];
+            $direction = ($dev === $ifbIf) ? 'UPLOAD' : 'DOWNLOAD';
+            $qdiscType = 'unknown';
+            if (isset($qdisc['kind'])) {
+                $qdiscType = $qdisc['kind'];
+            } elseif (isset($qdisc['qdisc'])) {
+                $qdiscType = $qdisc['qdisc'];
+            }
+            $isLastQdisc = ($qdiscCount === count($qdiscsByHash[$hash]));
+            $prefix = $isLastQdisc and !$hasFilters ? '└' : '├';
+            print('│  '.$prefix.'─ Qdisc ['.$direction.'] on '.$dev.PHP_EOL);
+            $nextPrefix = ($isLastQdisc and !$hasFilters) ? '   ' : '│  ';
+            print($nextPrefix.'  ├─ Type: '.$qdiscType.PHP_EOL);
+            $detailCount = 0;
+            $details = array();
+            if (isset($qdisc['handle'])) {
+                $details[] = array('Handle', $qdisc['handle']);
+            }
+            if (isset($qdisc['parent'])) {
+                $details[] = array('Parent', $qdisc['parent']);
+            }
+            foreach ($details as $idx => $detail) {
+                $isLastDetail = ($idx === count($details) - 1);
+                $detailPrefix = $isLastDetail ? '└' : '├';
+                print($nextPrefix.'  '.$detailPrefix.'─ '.$detail[0].': '.$detail[1].PHP_EOL);
+            }
+        }
+    } else {
+        $prefix = !$hasFilters ? '└' : '├';
+        print('│  '.$prefix.'─ Qdisc: NOT FOUND'.PHP_EOL);
+    }
+    
+    if ($hasFilters) {
+        $filterCount = 0;
+        foreach ($filtersByHash[$hash] as $filter) {
+            $filterCount++;
+            $dev = $filter['dev'];
+            $direction = ($dev === $ifbIf) ? 'UPLOAD' : 'DOWNLOAD';
+            $isLastFilter = ($filterCount === count($filtersByHash[$hash]));
+            $prefix = $isLastFilter ? '└' : '├';
+            print('│  '.$prefix.'─ Filter ['.$direction.'] on '.$dev.PHP_EOL);
+            $nextPrefix = $isLastFilter ? '   ' : '│  ';
+            $details = array();
+            if (isset($filter['handle'])) {
+                $details[] = array('Handle', $filter['handle']);
+            }
+            if (isset($filter['pref'])) {
+                $details[] = array('Priority', $filter['pref']);
+            }
+            if (preg_match('/match ip (src|dst) ([0-9.]+)/', $filter['details'], $matches)) {
+                $matchType = $matches[1];
+                $matchIP = $matches[2];
+                $details[] = array('Match', 'ip '.$matchType.' '.$matchIP);
+            }
+            if (preg_match('/ht ([0-9a-f:]+)/', $filter['details'], $matches)) {
+                $details[] = array('Hash Table', $matches[1]);
+            }
+            $hits = '0';
+            if (preg_match('/success (\d+)/', $filter['details'], $matches)) {
+                $hits = $matches[1];
+            }
+            $details[] = array('Hits', $hits);
+            foreach ($details as $idx => $detail) {
+                $isLastDetail = ($idx === count($details) - 1);
+                $detailPrefix = $isLastDetail ? '└' : '├';
+                print($nextPrefix.'  '.$detailPrefix.'─ '.$detail[0].': '.$detail[1].PHP_EOL);
+            }
+        }
+    } else {
+        print('│  └─ Filter: NOT FOUND'.PHP_EOL);
+    }
+    
+    print(PHP_EOL);
+}
+
+if (empty($allHashes)) {
+    print('No classes, qdiscs, or filters found.'.PHP_EOL);
+} else {
+    $orphanCount = 0;
+    $activeCount = 0;
+    foreach ($allHashes as $hash) {
+        if (isset($hashToIP[$hash])) {
+            $activeCount++;
+        } else {
+            $orphanCount++;
+        }
+    }
+    print('=== Summary ==='.PHP_EOL);
+    print('Total entries: '.count($allHashes).PHP_EOL);
+    print('  - Active subscribers: '.$activeCount.PHP_EOL);
+    print('  - Inactive subscribers: '.count($inactiveIPs).PHP_EOL);
+    print('  - Orphaned entries: '.($orphanCount-1).PHP_EOL); // -1 because of the default class
+    print('Total classes: '.count($allClasses).PHP_EOL);
+    print('Total qdiscs: '.count($allQdiscs).PHP_EOL);
+    print('Total filters: '.count($allFilters).PHP_EOL);
+}

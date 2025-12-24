@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <PORT>" >&2
+    exit 1
+fi
+
+PORT="$1"
+
+nft list set ${NFT_FAMILY} ${NFT_TABLE} outport_blocked >/dev/null 2>&1 || {
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} outport_blocked '{ type inet_service; }'
+}
+
+nft add element ${NFT_FAMILY} ${NFT_TABLE} outport_blocked { ${PORT} } 2>/dev/null || {
+    echo "Error: Failed to add ${PORT} to outport_blocked set" >&2
+    exit 1
+}
+
+echo "== Blocked outgoing port ${PORT} from users network =="
+

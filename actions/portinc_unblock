@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <PORT>" >&2
+    exit 1
+fi
+
+PORT="$1"
+
+nft delete element ${NFT_FAMILY} ${NFT_TABLE} incport_blocked { ${PORT} } 2>/dev/null || {
+    echo "Error: Failed to remove ${PORT} from incport_blocked set" >&2
+    exit 1
+}
+
+echo "== Unblocked incoming port ${PORT} to users network =="
+

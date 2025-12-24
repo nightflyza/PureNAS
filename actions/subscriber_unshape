@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+IP="$1"
+
+# interface used as user gateway
+if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+    USER_GW_IF="${BRIDGE_NAME}"
+else
+    USER_GW_IF="${LAN_IF}"
+fi
+
+if [ -z "$IP" ]; then
+    echo "Usage: $0 <IP_ADDRESS>"
+    exit 1
+fi
+
+IP_HASH=$("${SCRIPT_DIR}/../lib/calcmark" "$IP")
+HASH_HEX=$(printf "%x" $IP_HASH)
+CLASSID="1:${IP_HASH}"
+CLASSID_HEX="1:0x${HASH_HEX}"
+
+IFS=. read -r _ _ O3 O4 <<< "$IP"
+TABLE_ID=$(printf "%02x" $((O3+1)))
+BUCKET_HEX=$(printf "%x" $O4)
+FILTER_ID=$(((IP_HASH + 1) & 4095))
+FILTER_ID_HEX=$(printf "%x" $FILTER_ID)
+FULL_HANDLE_FILTER="${TABLE_ID}:${BUCKET_HEX}:${FILTER_ID_HEX}"
+
+tc filter del dev ${IFB_IF} parent 1: protocol ip prio 3 handle ${FULL_HANDLE_FILTER} u32 2>/dev/null || true
+tc filter del dev ${USER_GW_IF} parent 1: protocol ip prio 3 handle ${FULL_HANDLE_FILTER} u32 2>/dev/null || true
+
+tc qdisc del dev ${IFB_IF} parent $CLASSID_HEX 2>/dev/null || true
+tc qdisc del dev ${USER_GW_IF} parent $CLASSID_HEX 2>/dev/null || true
+
+tc class delete dev ${IFB_IF} parent 1:0 classid $CLASSID_HEX 2>/dev/null || true
+
+tc class delete dev ${USER_GW_IF} parent 1:0 classid $CLASSID_HEX 2>/dev/null || true
+
+echo "== UNSHAPED: ${IP}  CLASSID=${CLASSID}/${CLASSID_HEX} =="
+

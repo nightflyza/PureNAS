@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/purenas.conf"
+
+
+echo 'Fast as fuck'
+echo ''
+echo '__________                      _______      _____    _________'
+echo '\______   \__ _________   ____  \      \   /  _  \  /   _____/'
+echo '|     ___/  |  \_  __ \_/ __ \ /   |   \  /  /_\  \ \_____  \ '
+echo '|    |   |  |  /|  | \/\  ___//    |    \/    |    \/        \'
+echo '|____|   |____/ |__|    \___  >____|__  /\____|__  /_______  /'
+echo '                             \/        \/         \/        \/ '
+echo ''
+
+echo "== Initializing PureNAS =="
+
+"${SCRIPT_DIR}/lib/modload"
+"${SCRIPT_DIR}/lib/preconf"
+"${SCRIPT_DIR}/lib/interfaces"
+"${SCRIPT_DIR}/lib/reslvrs"
+"${SCRIPT_DIR}/lib/iftune"
+"${SCRIPT_DIR}/lib/firewall"
+"${SCRIPT_DIR}/lib/nat"
+"${SCRIPT_DIR}/lib/shaper"
+"${SCRIPT_DIR}/lib/nfsensor"
+"${SCRIPT_DIR}/lib/rsd"
+"${SCRIPT_DIR}/lib/snmd"
+
+echo "== FINISHED =="
+

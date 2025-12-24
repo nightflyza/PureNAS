@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${INTERFACES_TUNEUPS}" = "YES" ]; then
+    echo "== Applying interfaces tuneups =="
+    /sbin/ethtool -G ${LAN_IF} ${INTEFACES_RING_PARAMS}
+    /sbin/ethtool -K ${LAN_IF} ${INTERFACES_OFFLOADS} >/dev/null
+    ip link set ${LAN_IF} txqueuelen ${INTERFACES_TXQUEUE_LENGTH}
+
+    /sbin/ethtool -G ${WAN_IF} ${INTEFACES_RING_PARAMS} 
+    /sbin/ethtool -K ${WAN_IF} ${INTERFACES_OFFLOADS} >/dev/null 
+    ip link set ${WAN_IF} txqueuelen ${INTERFACES_TXQUEUE_LENGTH}
+fi

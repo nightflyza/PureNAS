@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${RSCRIPTD_ENABLED}" = "YES" ]; then
+    echo "== Starting rscriptd =="
+    killall rscriptd >/dev/null 2>&1 || true
+    while pgrep -x rscriptd >/dev/null 2>&1; do
+        echo "== Waiting for rscriptd to shutdown if it is running... =="
+        sleep 1
+    done
+    /usr/sbin/rscriptd 2>&1 || true
+    echo "== rscriptd started =="
+fi

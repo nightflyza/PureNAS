@@ -1,0 +1,15 @@
+#!/bin/sh
+
+LOGIN=$1
+IP=$2
+CASH=$4
+ID=$3
+
+cur_date=`date \+\%Y.\%m.\%d`
+cur_time=`date \+\%H:\%M:\%S`
+
+
+/etc/PureNAS/actions/subscriber_unshape $IP
+/etc/PureNAS/actions/subscriber_disallow $IP
+
+echo "$cur_date $cur_time DISCONNECT: ID-$ID;LOGIN-$LOGIN;IP-$IP;CASH-$CASH;" >> /var/log/allconnect.log

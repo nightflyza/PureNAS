@@ -1,0 +1,145 @@
+#!/usr/bin/php
+<?php
+
+require_once(dirname(__FILE__).'/../lib/puritylib.php');
+
+$sampleSubscribersCount = 10;
+$uploadFactor = 2;
+$sampleNet = '172.16.0.0/17';
+
+$sampleSpeeds = array(
+    '532480',
+    '327680',
+    '209920',
+    '107520',
+    '106520',
+    '51840'
+);
+
+///////////////////////////////////////////
+
+if (php_sapi_name() !== 'cli') {
+    fwrite(STDERR, 'Error: This script can only be executed from command line'.PHP_EOL);
+    exit(1);
+}
+
+$uid = posix_geteuid();
+if ($uid !== 0) {
+    fwrite(STDERR, 'Error: This script must be run as root'.PHP_EOL);
+    exit(1);
+}
+
+print('=== Seed Script ==='.PHP_EOL);
+print('Usage: gseed [count] [fast]'.PHP_EOL);
+
+
+$fastMode = false;
+if (isset($argv[1]) and !empty($argv[1])) {
+    if ($argv[1] === 'fast') {
+        $fastMode = true;
+        if (isset($argv[2]) and !empty($argv[2])) {
+            $cliCount = (int)$argv[2];
+            if ($cliCount > 0) {
+                $sampleSubscribersCount = $cliCount;
+            } else {
+                fwrite(STDERR, 'Error: Count must be a positive integer'.PHP_EOL);
+                exit(1);
+            }
+        }
+    } else {
+        $cliCount = (int)$argv[1];
+        if ($cliCount > 0) {
+            $sampleSubscribersCount = $cliCount;
+        } else {
+            fwrite(STDERR, 'Error: Count must be a positive integer'.PHP_EOL);
+            exit(1);
+        }
+        if (isset($argv[2]) and $argv[2] === 'fast') {
+            $fastMode = true;
+        }
+    }
+}
+
+$scriptDir = dirname(__FILE__);
+$initScript = $scriptDir.'/../init';
+$subscriberAllow = $scriptDir.'/subscriber_allow';
+$subscriberShape = $scriptDir.'/subscriber_shape';
+
+print('Generating '.$sampleSubscribersCount.' sample subscribers in network '.$sampleNet.PHP_EOL);
+if ($fastMode) {
+    print('Fast mode: Parallel processing enabled'.PHP_EOL);
+}
+print(PHP_EOL);
+
+print('=== Running init ==='.PHP_EOL);
+exec($initScript.' 2>&1', $initOutput, $initReturn);
+if ($initReturn !== 0) {
+    fwrite(STDERR, 'Error: Failed to run init'.PHP_EOL);
+    exit(1);
+}
+foreach ($initOutput as $line) {
+    print($line.PHP_EOL);
+}
+print(PHP_EOL);
+
+$networkInfo = parseNetwork($sampleNet);
+if ($networkInfo === null) {
+    fwrite(STDERR, 'Error: Invalid network format: '.$sampleNet.PHP_EOL);
+    exit(1);
+}
+
+$generatedIPs = generateSequentialIPs($networkInfo, $sampleSubscribersCount);
+if ($generatedIPs === null) {
+    fwrite(STDERR, 'Error: Not enough valid IPs available in network '.$sampleNet.PHP_EOL);
+    exit(1);
+}
+
+if ($fastMode) {
+    $batchSize = 10;
+    $maxConcurrent = min(100, max(1, (int)($sampleSubscribersCount / $batchSize)));
+    
+    print('Fast mode: Running up to '.$maxConcurrent.' processes concurrently'.PHP_EOL.PHP_EOL);
+    
+    $batches = array_chunk($generatedIPs, $batchSize);
+    $batchIndex = 0;
+    
+    foreach ($batches as $batch) {
+        foreach ($batch as $ip) {
+            $downloadSpeed = $sampleSpeeds[array_rand($sampleSpeeds)];
+            $uploadSpeed = (int)($downloadSpeed / $uploadFactor);
+            
+            $curDateTime = date('Y-m-d H:i:s');
+            print($curDateTime.' Queuing: '.$ip.' (DOWN: '.$downloadSpeed.'kbit, UP: '.$uploadSpeed.'kbit)'.PHP_EOL);
+            
+            $cmd = escapeshellarg($subscriberAllow).' '.escapeshellarg($ip).' > /dev/null 2>&1 && '.escapeshellarg($subscriberShape).' '.escapeshellarg($ip).' '.$downloadSpeed.' '.$uploadSpeed.' > /dev/null 2>&1 &';
+            exec($cmd);
+        }
+        
+        $batchIndex++;
+        if ($batchIndex < count($batches)) {
+            usleep(100000);
+        }
+    }
+    
+    print(PHP_EOL.'All '.count($generatedIPs).' subscribers queued for processing'.PHP_EOL);
+} else {
+    foreach ($generatedIPs as $ip) {
+        $curDateTime=date('Y-m-d H:i:s');
+        $downloadSpeed = $sampleSpeeds[array_rand($sampleSpeeds)];
+        $uploadSpeed = (int)($downloadSpeed / $uploadFactor);
+        
+        print($curDateTime.' Generating: '.$ip.' (DOWN: '.$downloadSpeed.'kbit, UP: '.$uploadSpeed.'kbit)'.PHP_EOL);
+        
+        exec($subscriberAllow.' '.$ip.' 2>&1', $allowOutput, $allowReturn);
+        if ($allowReturn !== 0) {
+            fwrite(STDERR, 'Error: Failed to allow subscriber '.$ip.PHP_EOL);
+            continue;
+        }
+        
+        exec($subscriberShape.' '.$ip.' '.$downloadSpeed.' '.$uploadSpeed.' 2>&1', $shapeOutput, $shapeReturn);
+        if ($shapeReturn !== 0) {
+            fwrite(STDERR, 'Error: Failed to shape subscriber '.$ip.PHP_EOL);
+            continue;
+        }
+    }
+}

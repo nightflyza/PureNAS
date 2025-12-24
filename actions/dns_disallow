@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <IP_ADDRESS>" >&2
+    exit 1
+fi
+
+IP="$1"
+
+nft delete element ${NFT_FAMILY} ${NFT_TABLE} allowed_dns { ${IP} } 2>/dev/null || {
+    echo "Error: Failed to remove ${IP} from allowed_dns set" >&2
+    exit 1
+}
+
+conntrack -D -d ${IP} >/dev/null 2>&1 || true
+
+echo "== Disallowed DNS server ${IP} =="
+

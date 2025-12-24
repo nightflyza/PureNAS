@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${NETFLOW_SENSOR_ENABLED}" = "YES" ]; then
+    if [ -n "${NETFLOW_COLLECTOR}" ]; then
+        if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+            SENSOR_IF="${BRIDGE_NAME}"
+        else
+            SENSOR_IF="${LAN_IF}"
+        fi
+        SAMPLING_RATE=${NETFLOW_SAMPLING_RATE}
+        SENSOR_PARAMETERS="-s ${SAMPLING_RATE} -t udp=60 -t tcp=60 -t icmp=60 -t general=60 -t maxlife=60 -t tcp.rst=60 -t tcp.fin=60"
+
+        echo "== Configuring NetFlow sensor on ${SENSOR_IF} =="
+        
+        softflowctl shutdown >/dev/null 2>&1 || true
+        while pgrep -x softflowd >/dev/null 2>&1; do
+            echo "== Waiting for softflowd to shutdown if it is running... =="
+            sleep 1
+        done
+        softflowd -i ${SENSOR_IF} ${SENSOR_PARAMETERS} -n ${NETFLOW_COLLECTOR}
+        echo "== NetFlow sensor started export to ${NETFLOW_COLLECTOR} =="
+    fi
+fi

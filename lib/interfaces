@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+echo "== Configuring interfaces =="
+
+echo "== Enabling internal interface ${LAN_IF} =="
+ip link set dev ${LAN_IF} up
+
+
+if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+    echo "== Creating bridge ${BRIDGE_NAME} =="
+    if ! ip link show "${BRIDGE_NAME}" >/dev/null 2>&1; then
+        ip link add name "${BRIDGE_NAME}" type bridge
+    fi
+
+    ip link set dev "${BRIDGE_NAME}" up
+
+    if [ -n "${BRIDGE_MAC}" ]; then
+        ip link set dev "${BRIDGE_NAME}" address "${BRIDGE_MAC}"
+    fi
+
+    echo "== Creating VLANs and adding to bridge =="
+
+    # Create implicit VLANs if VLAN_COUNT > 0
+    if [ "${VLAN_COUNT:-0}" -gt 0 ]; then
+        VLAN_TO=$((VLAN_FROM + VLAN_COUNT - 1))
+
+        for i in $(seq ${VLAN_FROM} ${VLAN_TO}); do
+            VLAN_IF="${LAN_IF}.${i}"
+
+            if ! ip link show "${VLAN_IF}" >/dev/null 2>&1; then
+                echo "== Creating implicit VLAN ${VLAN_IF} =="
+                ip link add link "${LAN_IF}" name "${VLAN_IF}" type vlan id "${i}"
+            fi
+
+            ip link set dev "${VLAN_IF}" up
+            ip link set dev "${VLAN_IF}" master "${BRIDGE_NAME}"
+
+            bridge link set dev "${VLAN_IF}" isolated on
+        done
+    fi
+
+    # Create explicit VLANs if specified
+    if [ -n "${EXPLICT_VLANS:-}" ]; then
+        for vlan_id in ${EXPLICT_VLANS}; do
+            VLAN_IF="${LAN_IF}.${vlan_id}"
+
+            if ! ip link show "${VLAN_IF}" >/dev/null 2>&1; then
+                echo "== Creating explicit VLAN ${VLAN_IF} =="
+                ip link add link "${LAN_IF}" name "${VLAN_IF}" type vlan id "${vlan_id}"
+            fi
+
+            ip link set dev "${VLAN_IF}" up
+            ip link set dev "${VLAN_IF}" master "${BRIDGE_NAME}"
+
+            bridge link set dev "${VLAN_IF}" isolated on
+        done
+    fi
+
+    if [ "${FORCE_ASSIGN_GATEWAY_IP}" = "YES" ]; then
+        echo "== Assigning gateway IP(s) to bridge ${BRIDGE_NAME} =="
+        if [ -n "${USER_GATEWAY_IP:-}" ]; then
+            for gateway_ip in ${USER_GATEWAY_IP}; do
+                if ! ip addr show dev "${BRIDGE_NAME}" | grep -q "${gateway_ip}"; then
+                    ip addr add "${gateway_ip}" dev "${BRIDGE_NAME}" 2>/dev/null || true
+                fi
+            done
+        fi
+    fi
+else
+    if [ "${FORCE_ASSIGN_GATEWAY_IP}" = "YES" ]; then
+        echo "== Assigning gateway IP(s) to ${LAN_IF} =="
+        if [ -n "${USER_GATEWAY_IP:-}" ]; then
+            for gateway_ip in ${USER_GATEWAY_IP}; do
+                if ! ip addr show dev "${LAN_IF}" | grep -q "${gateway_ip}"; then
+                    ip addr add "${gateway_ip}" dev "${LAN_IF}" 2>/dev/null || true
+                    echo "== Assigned gateway IP ${gateway_ip} to ${LAN_IF} =="
+                fi
+            done
+        fi
+    fi
+fi
+
+if [ -n "${WAN_IP:-}" ]; then
+    echo "== Configuring WAN interface ${WAN_IF} =="
+    ip link set dev ${WAN_IF} up
+    
+    echo "== Assigning IP(s) to WAN interface ${WAN_IF} =="
+    for wan_ip in ${WAN_IP}; do
+        if ! ip addr show dev "${WAN_IF}" | grep -q "${wan_ip}"; then
+            ip addr add "${wan_ip}" dev "${WAN_IF}" 2>/dev/null || true
+            echo "== Assigned IP ${wan_ip} to ${WAN_IF} =="
+        fi
+    done
+fi
+
+if [ -n "${WAN_DEFAULT_ROUTE:-}" ]; then
+    ip route del default 2>/dev/null || true
+    ip route add default via "${WAN_DEFAULT_ROUTE}" 2>/dev/null || true
+    echo "== Configured default route via ${WAN_DEFAULT_ROUTE} =="
+fi

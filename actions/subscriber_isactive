@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+IP="$1"
+
+if [ -z "$IP" ]; then
+    echo "Usage: $0 <IP_ADDRESS>"
+    exit 1
+fi
+
+if nft get element ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} { ${IP} } >/dev/null 2>&1; then
+    echo "1"
+else
+    echo "0"
+fi 

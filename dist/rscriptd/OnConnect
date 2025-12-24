@@ -1,0 +1,19 @@
+#!/bin/sh
+
+LOGIN=$1
+IP=$2
+CASH=$4
+ID=$3
+
+SPEED=`/etc/rscriptd/GetSpeed $LOGIN`
+UPSPEED=`/etc/rscriptd/GetUpSpeed $LOGIN`
+MAC=`/etc/rscriptd/GetMac $LOGIN`
+
+cur_date=`date \+\%Y.\%m.\%d`
+cur_time=`date \+\%H:\%M:\%S`
+
+/etc/PureNAS/actions/subscriber_arp $IP $MAC
+/etc/PureNAS/actions/subscriber_allow $IP
+/etc/PureNAS/actions/subscriber_shape $IP $SPEED $UPSPEED
+
+echo "$cur_date $cur_time CONNECT: ID-$ID;LOGIN-$LOGIN;IP-$IP;CASH-$CASH;SPEED-$SPEED;UPSPEED-$UPSPEED,MAC-$MAC" >> /var/log/allconnect.log

@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${SHAPER_ENABLED}" = "YES" ]; then
+    echo "== Configuring shaper =="
+    # interface used as user gateway depend on VLAN_BRIDGE_ENABLED
+    if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+        USER_GW_IF="${BRIDGE_NAME}"
+    else
+        USER_GW_IF="${LAN_IF}"
+    fi
+
+    echo "== Cleaning up existing shaper configuration =="
+    
+    if ip link show ${IFB_IF} >/dev/null 2>&1; then
+        tc filter del dev ${IFB_IF} parent 1: 2>/dev/null || true
+        tc class show dev ${IFB_IF} 2>/dev/null | grep "class htb" | awk '{print $3}' | while read class; do
+            if [ -n "$class" ] && [ "$class" != "1:0" ] && [ "$class" != "1:ffff" ]; then
+                tc qdisc del dev ${IFB_IF} parent $class 2>/dev/null || true
+                tc class del dev ${IFB_IF} classid $class 2>/dev/null || true
+            fi
+        done
+        tc qdisc del dev ${IFB_IF} root 2>/dev/null || true
+        ip link del ${IFB_IF} 2>/dev/null || true
+    fi
+    
+    if ip link show ${USER_GW_IF} >/dev/null 2>&1; then
+        tc filter del dev ${USER_GW_IF} parent ffff: 2>/dev/null || true
+        tc filter del dev ${USER_GW_IF} parent 1: 2>/dev/null || true
+        tc class show dev ${USER_GW_IF} 2>/dev/null | grep "class htb" | awk '{print $3}' | while read class; do
+            if [ -n "$class" ] && [ "$class" != "1:0" ] && [ "$class" != "1:ffff" ]; then
+                tc qdisc del dev ${USER_GW_IF} parent $class 2>/dev/null || true
+                tc class del dev ${USER_GW_IF} classid $class 2>/dev/null || true
+            fi
+        done
+        tc qdisc del dev ${USER_GW_IF} ingress 2>/dev/null || true
+        tc qdisc del dev ${USER_GW_IF} root 2>/dev/null || true
+    fi
+
+    echo "== Loading kernel modules =="
+    modprobe ifb
+    ip link add ${IFB_IF} type ifb
+    ip link set ${IFB_IF} up
+    ip link set dev ${IFB_IF} txqueuelen 10000
+    echo "== Created interface ${IFB_IF} =="
+
+    echo "== Using ${USER_GW_IF} as user gateway =="
+    ip link set dev ${USER_GW_IF} txqueuelen 10000
+
+    tc qdisc add dev ${USER_GW_IF} ingress
+    tc filter add dev ${USER_GW_IF} parent ffff: protocol ip matchall action mirred egress redirect dev ${IFB_IF}
+
+    tc qdisc add dev ${USER_GW_IF} root handle 1: htb r2q 10 default ffff
+    tc qdisc add dev ${IFB_IF} root handle 1: htb r2q 10 default ffff
+
+    # Main root class 10G
+    tc class add dev ${USER_GW_IF} parent 1: classid 1:0 htb rate ${IF_SPEED} ceil ${IF_SPEED} quantum 65535 2>/dev/null || true
+    tc class add dev ${IFB_IF} parent 1: classid 1:0 htb rate ${IF_SPEED} ceil ${IF_SPEED} quantum 65535 2>/dev/null || true
+
+    # DEFAULT CLASS (1:ffff) - Guaranteed 1Gbit, max 10Gbit
+    # rate = guaranteed (1Gbit), ceil = maximum (10Gbit)
+    tc class add dev ${USER_GW_IF} parent 1:0 classid 1:ffff htb rate 1gbit ceil ${IF_SPEED} quantum 65535 2>/dev/null || true
+    tc class add dev ${IFB_IF} parent 1:0 classid 1:ffff htb rate 1gbit ceil ${IF_SPEED} quantum 65535 2>/dev/null || true
+    tc qdisc add dev ${USER_GW_IF} parent 1:ffff handle fff0 fq_codel limit 20480 2>/dev/null || true
+    tc qdisc add dev ${IFB_IF} parent 1:ffff handle fff0 fq_codel limit 20480 2>/dev/null || true
+
+    echo "== Initializing hash table structure =="
+    
+    # Extract network base from USER_NET (e.g., 172.16.0.0/24 -> 172.16.0.0)
+    USER_NET_BASE=$(echo ${USER_NET} | cut -d'/' -f1)
+    IFS=. read -r O1 O2 O3 O4 <<< "$USER_NET_BASE"
+    
+    # Top-level hash table structure
+    # For upload (IFB): match on source IP
+    # For download (USER_GW_IF): match on destination IP
+    tc filter add dev ${IFB_IF} parent 1:0 protocol ip pref 1 u32 2>/dev/null || true
+    tc filter add dev ${IFB_IF} parent 1:0 handle 999: protocol ip pref 2 u32 divisor 256 2>/dev/null || true
+    
+    tc filter add dev ${USER_GW_IF} parent 1:0 protocol ip pref 1 u32 2>/dev/null || true
+    tc filter add dev ${USER_GW_IF} parent 1:0 handle 999: protocol ip pref 2 u32 divisor 256 2>/dev/null || true
+    
+    # Link top-level hash table (800::) to second level (999:)
+    # Match on user network range, extract 3rd octet (mask 0x0000ff00)
+    # Offset 12 for source IP, offset 16 for destination IP
+    tc filter add dev ${IFB_IF} parent 1:0 protocol ip pref 1 u32 ht 800:: match ip src ${O1}.${O2}.0.0/16 hashkey mask 0x0000ff00 at 12 link 999: 2>/dev/null || true
+    tc filter add dev ${USER_GW_IF} parent 1:0 protocol ip pref 1 u32 ht 800:: match ip dst ${O1}.${O2}.0.0/16 hashkey mask 0x0000ff00 at 16 link 999: 2>/dev/null || true
+    
+    # Generate 256 hash tables, one for each 3rd octet value (0-255)
+    # Link second level (999:${HEX}:) to third level (${TABLE_ID}:)
+    for i in $(seq 0 255); do
+        HEX=$(printf "%02x" $i)
+        TABLE_ID=$(printf "%02x" $((i+1)))
+        
+        # Third level: hash table for each 3rd octet
+        tc filter add dev ${IFB_IF} parent 1:0 handle ${TABLE_ID}: protocol ip pref 3 u32 divisor 256 2>/dev/null || true
+        tc filter add dev ${USER_GW_IF} parent 1:0 handle ${TABLE_ID}: protocol ip pref 3 u32 divisor 256 2>/dev/null || true
+        
+        # Link second level to third level
+        # Match on /24 subnet for each 3rd octet, extract 4th octet (mask 0x000000ff)
+        tc filter add dev ${IFB_IF} parent 1:0 protocol ip pref 2 u32 ht 999:${HEX}: match ip src ${O1}.${O2}.${i}.0/24 hashkey mask 0x000000ff at 12 link ${TABLE_ID}: 2>/dev/null || true
+        tc filter add dev ${USER_GW_IF} parent 1:0 protocol ip pref 2 u32 ht 999:${HEX}: match ip dst ${O1}.${O2}.${i}.0/24 hashkey mask 0x000000ff at 16 link ${TABLE_ID}: 2>/dev/null || true
+    done
+
+    echo "== Shaper configuration complete =="
+fi

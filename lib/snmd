@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${SNMP_ENABLED}" = "YES" ]; then
+    echo "== Starting snmpd =="
+    killall snmpd >/dev/null 2>&1 || true
+    while pgrep -x snmpd >/dev/null 2>&1; do
+        echo "== Waiting for snmpd to shutdown if it is running... =="
+        sleep 1
+    done
+    echo "rocommunity ${SNMP_COMMUNITY}" > /tmp/puresnmpd.conf
+    echo "smuxsocket  1.0.0.0" >> /tmp/puresnmpd.conf
+    /usr/sbin/snmpd -C -c /tmp/puresnmpd.conf >/dev/null 2>&1 || true
+    echo "== snmpd started =="
+fi
+

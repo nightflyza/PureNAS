@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+echo "== Loading kernel modules =="
+
+for module in ${MODULES_LOAD}; do
+    modprobe ${module}
+    echo "Loaded module ${module}"
+done
+
+echo "== DONE =="

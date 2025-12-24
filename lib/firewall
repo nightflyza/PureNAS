@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+echo "== Configuring firewall =="
+
+echo "== Cleaning up existing firewall configuration =="
+nft delete table ${NFT_FAMILY} ${NFT_TABLE} 2>/dev/null || true
+nft flush table ${NFT_FAMILY} ${NFT_TABLE} 2>/dev/null || true
+
+nft add table ${NFT_FAMILY} ${NFT_TABLE}
+
+nft list set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} '{ type ipv4_addr; flags interval; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} 2>/dev/null || true
+
+nft list set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_INACTIVE_SET} >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_INACTIVE_SET} '{ type ipv4_addr; flags interval; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_INACTIVE_SET} 2>/dev/null || true
+
+echo "== Configuring user networks =="
+nft list set ${NFT_FAMILY} ${NFT_TABLE} users_networks >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} users_networks '{ type ipv4_addr; flags interval; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} users_networks 2>/dev/null || true
+if [ -n "${USER_NET:-}" ]; then
+    for net in ${USER_NET}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} users_networks { ${net} } 2>/dev/null || true
+    done
+fi
+
+echo "== Configuring user gateways =="
+nft list set ${NFT_FAMILY} ${NFT_TABLE} users_gateways >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} users_gateways '{ type ipv4_addr; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} users_gateways 2>/dev/null || true
+if [ -n "${USER_GATEWAY_IP:-}" ]; then
+    for gateway_ip in ${USER_GATEWAY_IP}; do
+        GATEWAY_IP_BASE="${gateway_ip%%/*}"
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} users_gateways { ${GATEWAY_IP_BASE} } 2>/dev/null || true
+    done
+fi
+
+echo "== Configuring banned hosts =="
+nft list set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts '{ type ipv4_addr; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts 2>/dev/null || true
+if [ -n "${BANNED_HOSTS:-}" ]; then
+    for ip in ${BANNED_HOSTS}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} banned_hosts { ${ip} } 2>/dev/null || true
+    done
+fi
+
+echo "== Configuring allowed DNS servers =="
+nft list set ${NFT_FAMILY} ${NFT_TABLE} allowed_dns >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} allowed_dns '{ type ipv4_addr; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} allowed_dns 2>/dev/null || true
+if [ -n "${ALLOWED_ONLY_DNS:-}" ]; then
+    for ip in ${ALLOWED_ONLY_DNS}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} allowed_dns { ${ip} } 2>/dev/null || true
+    done
+fi
+
+if nft list chain ${NFT_FAMILY} ${NFT_TABLE} input >/dev/null 2>&1; then
+    nft flush chain ${NFT_FAMILY} ${NFT_TABLE} input 2>/dev/null || true
+else
+    nft add chain ${NFT_FAMILY} ${NFT_TABLE} input '{ type filter hook input priority 0; policy accept; }'
+fi
+
+if nft list chain ${NFT_FAMILY} ${NFT_TABLE} forward >/dev/null 2>&1; then
+    nft flush chain ${NFT_FAMILY} ${NFT_TABLE} forward 2>/dev/null || true
+else
+    if [ "${DEFAULT_USER_BLOCK}" = "YES" ]; then
+        echo "== Configuring default firewall block policy for users network =="
+        nft add chain ${NFT_FAMILY} ${NFT_TABLE} forward '{ type filter hook forward priority 0; policy drop; }'
+    else
+        echo "== Configuring default firewall accept policy for users network =="
+        nft add chain ${NFT_FAMILY} ${NFT_TABLE} forward '{ type filter hook forward priority 0; policy accept; }'
+    fi
+fi
+
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ip saddr @banned_hosts drop 2>/dev/null || true
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ip daddr @banned_hosts drop 2>/dev/null || true
+
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ct state established,related accept 2>/dev/null || true
+
+echo "== Configuring protected ports =="
+nft list set ${NFT_FAMILY} ${NFT_TABLE} myports_protected >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} myports_protected '{ type inet_service; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} myports_protected 2>/dev/null || true
+if [ -n "${PROTECTED_PORTS:-}" ]; then
+    for port in ${PROTECTED_PORTS}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} myports_protected { ${port} } 2>/dev/null || true
+    done
+fi
+
+if [ -n "${SAFE_ZONES}" ]; then
+    echo "== Configuring safe zones =="
+    nft list set ${NFT_FAMILY} ${NFT_TABLE} safe_zones >/dev/null 2>&1 || \
+        nft add set ${NFT_FAMILY} ${NFT_TABLE} safe_zones '{ type ipv4_addr; flags interval; }'
+    nft flush set ${NFT_FAMILY} ${NFT_TABLE} safe_zones 2>/dev/null || true
+    for zone in ${SAFE_ZONES}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} safe_zones { ${zone} } 2>/dev/null || true
+    done
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ip saddr @safe_zones tcp dport @myports_protected accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ip saddr @safe_zones udp dport @myports_protected accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} input tcp dport @myports_protected ip saddr != @safe_zones drop 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} input udp dport @myports_protected ip saddr != @safe_zones drop 2>/dev/null || true
+fi
+
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @banned_hosts drop 2>/dev/null || true
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @banned_hosts drop 2>/dev/null || true
+
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ct state established,related accept 2>/dev/null || true
+
+if [ -n "${ALLOWED_ALWAYS:-}" ]; then
+    echo "== Configuring allowed always hosts =="
+    nft list set ${NFT_FAMILY} ${NFT_TABLE} allowed_always >/dev/null 2>&1 || \
+        nft add set ${NFT_FAMILY} ${NFT_TABLE} allowed_always '{ type ipv4_addr; }'
+    nft flush set ${NFT_FAMILY} ${NFT_TABLE} allowed_always 2>/dev/null || true
+    for ip in ${ALLOWED_ALWAYS}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} allowed_always { ${ip} } 2>/dev/null || true
+    done
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks ip daddr @allowed_always accept 2>/dev/null || true
+fi
+
+if [ -n "${ALLOWED_ONLY_DNS:-}" ]; then
+    echo "== Configuring DNS restrictions for user network =="
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 ip daddr @allowed_dns accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 ip daddr @allowed_dns accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 ip daddr != @allowed_dns drop 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 ip daddr != @allowed_dns drop 2>/dev/null || true
+else
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 accept 2>/dev/null || true
+fi
+
+if [ "${ISOLATION_ENABLED}" = "YES" ]; then
+    echo "== Configuring user isolation =="
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks ip daddr @users_networks ip daddr != @users_gateways drop 2>/dev/null || true
+fi
+
+echo "== Configuring blocked incoming ports =="
+nft list set ${NFT_FAMILY} ${NFT_TABLE} incport_blocked >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} incport_blocked '{ type inet_service; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} incport_blocked 2>/dev/null || true
+if [ -n "${BLOCKED_INCOMING_PORTS:-}" ]; then
+    for port in ${BLOCKED_INCOMING_PORTS}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} incport_blocked { ${port} } 2>/dev/null || true
+    done
+fi
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward iifname "${WAN_IF}" ip daddr @users_networks tcp dport @incport_blocked drop 2>/dev/null || true
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward iifname "${WAN_IF}" ip daddr @users_networks udp dport @incport_blocked drop 2>/dev/null || true
+
+echo "== Configuring blocked outgoing ports =="
+nft list set ${NFT_FAMILY} ${NFT_TABLE} outport_blocked >/dev/null 2>&1 || \
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} outport_blocked '{ type inet_service; }'
+nft flush set ${NFT_FAMILY} ${NFT_TABLE} outport_blocked 2>/dev/null || true
+if [ -n "${BLOCKED_OUTGOING_PORTS:-}" ]; then
+    for port in ${BLOCKED_OUTGOING_PORTS}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} outport_blocked { ${port} } 2>/dev/null || true
+    done
+fi
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport @outport_blocked drop 2>/dev/null || true
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport @outport_blocked drop 2>/dev/null || true
+
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" ip saddr @${NFT_ACTIVE_SET} accept 2>/dev/null || true
+
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks iifname "${WAN_IF}" ct state established,related accept 2>/dev/null || true

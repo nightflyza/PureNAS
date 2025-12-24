@@ -1,0 +1,146 @@
+#!/usr/bin/php
+<?php
+
+if (php_sapi_name() !== 'cli') {
+    fwrite(STDERR, 'Error: This script can only be executed from command line'.PHP_EOL);
+    exit(1);
+}
+
+$uid = posix_geteuid();
+if ($uid !== 0) {
+    fwrite(STDERR, 'Error: This script must be run as root'.PHP_EOL);
+    exit(1);
+}
+
+$scriptDir = dirname(__FILE__);
+$configFile = $scriptDir . '/../purenas.conf';
+$libFile = $scriptDir . '/../lib/puritylib.php';
+
+if (!file_exists($configFile)) {
+    fwrite(STDERR, 'Error: purenas.conf not found'.PHP_EOL);
+    exit(1);
+}
+
+require_once($libFile);
+
+$config = parseConfig($configFile);
+$requiredOptions = array('VLAN_BRIDGE_ENABLED', 'BRIDGE_NAME', 'LAN_IF', 'IFB_IF', 'NFT_FAMILY', 'NFT_TABLE', 'NFT_ACTIVE_SET', 'NFT_INACTIVE_SET');
+
+foreach ($requiredOptions as $option) {
+    if (!isset($config[$option])) {
+        fwrite(STDERR, 'Error: '.$option.' not found in purenas.conf'.PHP_EOL);
+        exit(1);
+    }
+}
+
+$vlanBridgeEnabled = $config['VLAN_BRIDGE_ENABLED'];
+if ($vlanBridgeEnabled === 'YES') {
+    $userGwIf = $config['BRIDGE_NAME'];
+} else {
+    $userGwIf = $config['LAN_IF'];
+}
+
+$ifbIf = $config['IFB_IF'];
+$nftFamily = $config['NFT_FAMILY'];
+$nftTable = $config['NFT_TABLE'];
+$nftSet = $config['NFT_ACTIVE_SET'];
+$nftInactiveSet = $config['NFT_INACTIVE_SET'];
+
+if (isset($argv[1]) and $argv[1] === 'summary') {
+    $activeIPs = getActiveSubscribers($nftFamily, $nftTable, $nftSet);
+    $inactiveIPs = getActiveSubscribers($nftFamily, $nftTable, $nftInactiveSet);
+    printf("Active subscribers: %d\n", count($activeIPs));
+    printf("Inactive subscribers: %d\n", count($inactiveIPs));
+    exit(0);
+}
+
+if (isset($argv[1]) and $argv[1] === 'terse') {
+    $activeIPs = getActiveSubscribers($nftFamily, $nftTable, $nftSet);
+    sort($activeIPs);
+    foreach ($activeIPs as $ip) {
+        print($ip.PHP_EOL);
+    }
+    exit(0);
+}
+
+$extensive = false;
+if (isset($argv[1]) and $argv[1] === 'extensive') {
+    $extensive = true;
+}
+
+$activeIPs = getActiveSubscribers($nftFamily, $nftTable, $nftSet);
+$inactiveIPs = getActiveSubscribers($nftFamily, $nftTable, $nftInactiveSet);
+$allClasses = getAllTcClasses($userGwIf, $ifbIf);
+$allFilters = getAllTcFilters($userGwIf, $ifbIf);
+
+$classesByHash = array();
+$filtersByIP = array();
+
+foreach ($allClasses as $class) {
+    $classid = isset($class['classid']) ? $class['classid'] : '';
+    $hash = null;
+    
+    if (preg_match('/^1:0x([0-9a-f]+)$/i', $classid, $matches)) {
+        $hash = hexdec($matches[1]);
+    } elseif (preg_match('/^1:(\d+)$/', $classid, $matches)) {
+        $hash = (int)$matches[1];
+    }
+    
+    if ($hash !== null) {
+        if (!isset($classesByHash[$hash])) {
+            $classesByHash[$hash] = array();
+        }
+        $classesByHash[$hash][] = $class;
+    }
+}
+
+foreach ($allFilters as $filter) {
+    $dev = isset($filter['dev']) ? $filter['dev'] : '';
+    $details = isset($filter['details']) ? $filter['details'] : '';
+    if ($dev === $ifbIf and preg_match('/match ip src ([\d.]+)\/32/i', $details, $matches)) {
+        $ip = $matches[1];
+        if (!isset($filtersByIP[$ip])) {
+            $filtersByIP[$ip] = array();
+        }
+        $filtersByIP[$ip][] = $filter;
+    }
+}
+
+$ipToHash = array();
+$ipToState = array();
+
+foreach ($activeIPs as $ip) {
+    $ipToHash[$ip] = calculateHash($ip);
+    $ipToState[$ip] = 'ACTIVE';
+}
+
+foreach ($inactiveIPs as $ip) {
+    if (!isset($ipToHash[$ip])) {
+        $ipToHash[$ip] = calculateHash($ip);
+    }
+    $ipToState[$ip] = 'INACTIVE';
+}
+
+$allIPs = array_unique(array_merge($activeIPs, $inactiveIPs));
+sort($allIPs);
+
+$arpEntries = getAllArpEntries();
+
+renderHeader($extensive);
+
+foreach ($allIPs as $ip) {
+    $hash = isset($ipToHash[$ip]) ? $ipToHash[$ip] : null;
+    $state = isset($ipToState[$ip]) ? $ipToState[$ip] : 'UNKNOWN';
+    
+    $mac = null;
+    $flag = null;
+    if (isset($arpEntries[$ip])) {
+        $mac = $arpEntries[$ip]['mac'];
+        $flag = $arpEntries[$ip]['flag'];
+    }
+    
+    renderSubscriberRow($ip, $state, $mac, $flag, $hash, $extensive, $classesByHash, $ifbIf, $filtersByIP);
+}
+
+printf("\nTotal active subscribers: %d\n", count($activeIPs));
+printf("Total inactive subscribers: %d\n", count($inactiveIPs));
