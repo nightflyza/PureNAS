@@ -36,12 +36,12 @@ apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves r
 ```
 
 
-### Ubuntu Server 24.04 (Not tested yet)
+### Ubuntu Server 25.10
 ```
 sudo bash
 apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny
 apt install -y git expat libexpat1-dev build-essential softflowd snmpd snmp
-apt install -y php8.3-cli php8.3-mysqli php8.3-mbstring php8.3-bcmath php8.3-curl
+apt install -y php8.4-cli php8.4-mysqli php8.4-mbstring php8.4-bcmath php8.4-curl
 apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev
 ```
 
