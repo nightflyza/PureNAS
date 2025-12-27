@@ -165,7 +165,7 @@ cp -R /etc/PureNAS/dist/99-nat-tuning.conf /etc/sysctl.d/
 sysctl -p /etc/sysctl.d/99-nat-tuning.conf
 ```
 
-## Kernel rebuild (Required on Debian)
+## Kernel rebuild (Required on Debian 13)
 
 ```
 KVER="$(uname -r | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
@@ -184,6 +184,12 @@ make olddefconfig
 make -j$(nproc)
 make modules_install
 make install
+
+rm -f /boot/vmlinuz-${KVER}+deb13-amd64
+rm -f /boot/initrd.img-${KVER}+deb13-amd64
+rm -f /boot/System.map-${KVER}+deb13-amd64
+rm -f /boot/config-${KVER}+deb13-amd64
+
 update-grub
 ```
 
