@@ -42,7 +42,7 @@ sudo bash
 apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny
 apt install -y git expat libexpat1-dev build-essential softflowd snmpd snmp
 apt install -y php8.4-cli php8.4-mysqli php8.4-mbstring php8.4-bcmath php8.4-curl
-apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev
+apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev clang
 ```
 
 ### Clone latest PureNAS snapshot
@@ -198,7 +198,20 @@ grep CONFIG_HZ /boot/config-$(uname -r)
 
 ## rscriptd setup
 
+### Debian 13.2
 ```
+wget http://ubilling.net.ua/stg/stg-2.409.tar.gz
+tar zxvf stg-2.409.tar.gz
+cd stg-2.409/projects/rscriptd/
+./build 
+/usr/bin/gmake install
+```
+
+### Ubuntu 25.10
+```
+export CC=/usr/bin/clang
+export CXX=/usr/bin/clang++
+export CXXFLAGS=-std=c++11
 wget http://ubilling.net.ua/stg/stg-2.409.tar.gz
 tar zxvf stg-2.409.tar.gz
 cd stg-2.409/projects/rscriptd/
