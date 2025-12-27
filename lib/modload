@@ -6,9 +6,19 @@ source "${SCRIPT_DIR}/../purenas.conf"
 
 echo "== Loading kernel modules =="
 
+#load modules if not empty
+if [ -n "${MODULES_LOAD}" ]; then
 for module in ${MODULES_LOAD}; do
     modprobe ${module}
-    echo "Loaded module ${module}"
-done
+        echo "Loaded module ${module}"
+    done
+fi
+
+#reaply sysctl settings while modules loaded if required
+if [ -f /etc/sysctl.d/99-nat-tuning.conf ]; then
+    echo "== Reapplying sysctl settings =="
+    sysctl -p /etc/sysctl.d/99-nat-tuning.conf
+    echo "== Sysctl settings reapplied =="
+fi
 
 echo "== DONE =="
