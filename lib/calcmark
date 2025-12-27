@@ -7,8 +7,6 @@ IFS=. read -r _ _ C D <<< "$IP"
 CLASSID_HASH=$(( (C << 8) | D ))
 if [ "$CLASSID_HASH" -eq 0 ]; then
     CLASSID_HASH=1
-elif [ "$CLASSID_HASH" -eq 9999 ]; then
-    CLASSID_HASH=10000
 fi
 
 echo "${CLASSID_HASH}"

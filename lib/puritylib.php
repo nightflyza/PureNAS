@@ -35,8 +35,6 @@ function calculateHash($ip) {
     $hash = ($c << 8) | $d;
     if ($hash === 0) {
         $hash = 1;
-    } elseif ($hash === 9999) {
-        $hash = 10000;
     }
     return($hash);
 }
