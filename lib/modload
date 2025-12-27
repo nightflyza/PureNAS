@@ -17,7 +17,7 @@ fi
 #reaply sysctl settings while modules loaded if required
 if [ -f /etc/sysctl.d/99-nat-tuning.conf ]; then
     echo "== Reapplying sysctl settings =="
-    sysctl -p /etc/sysctl.d/99-nat-tuning.conf
+    sysctl -p /etc/sysctl.d/99-nat-tuning.conf >/dev/null 2>&1
     echo "== Sysctl settings reapplied =="
 fi
 
