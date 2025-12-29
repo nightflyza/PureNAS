@@ -107,9 +107,18 @@ nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @banned_hosts drop 2>/d
 
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ct state established,related accept 2>/dev/null || true
 
-if [ "${DEFAULT_USER_BLOCK}" = "YES" ]; then
-    echo "== Configuring default firewall block policy for inactive users =="
-    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} oifname "${WAN_IF}" drop 2>/dev/null || true
+if [ -n "${ALLOWED_ONLY_DNS:-}" ]; then
+    echo "== Configuring DNS restrictions for user network =="
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 ip daddr @allowed_dns accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 ip daddr @allowed_dns accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks iifname "${WAN_IF}" ip saddr @allowed_dns accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 ip daddr != @allowed_dns drop 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 ip daddr != @allowed_dns drop 2>/dev/null || true
+else
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks iifname "${WAN_IF}" udp sport 53 accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks iifname "${WAN_IF}" tcp sport 53 accept 2>/dev/null || true
 fi
 
 if [ -n "${ALLOWED_ALWAYS:-}" ]; then
@@ -121,17 +130,7 @@ if [ -n "${ALLOWED_ALWAYS:-}" ]; then
         nft add element ${NFT_FAMILY} ${NFT_TABLE} allowed_always { ${ip} } 2>/dev/null || true
     done
     nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks ip daddr @allowed_always accept 2>/dev/null || true
-fi
-
-if [ -n "${ALLOWED_ONLY_DNS:-}" ]; then
-    echo "== Configuring DNS restrictions for user network =="
-    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 ip daddr @allowed_dns accept 2>/dev/null || true
-    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 ip daddr @allowed_dns accept 2>/dev/null || true
-    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 ip daddr != @allowed_dns drop 2>/dev/null || true
-    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 ip daddr != @allowed_dns drop 2>/dev/null || true
-else
-    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 accept 2>/dev/null || true
-    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport 53 accept 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks iifname "${WAN_IF}" ip saddr @allowed_always accept 2>/dev/null || true
 fi
 
 if [ "${ISOLATION_ENABLED}" = "YES" ]; then
@@ -166,6 +165,9 @@ nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname
 if [ "${DEFAULT_USER_BLOCK}" = "YES" ]; then
     nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" ip saddr @${NFT_ACTIVE_SET} accept 2>/dev/null || true
     nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks iifname "${WAN_IF}" ip daddr @${NFT_ACTIVE_SET} accept 2>/dev/null || true
+    echo "== Configuring default firewall block policy for inactive users =="
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} oifname "${WAN_IF}" drop 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks ip daddr != @${NFT_ACTIVE_SET} iifname "${WAN_IF}" drop 2>/dev/null || true
 fi
 
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks iifname "${WAN_IF}" ct state established,related accept 2>/dev/null || true
