@@ -210,16 +210,10 @@ function getAllTcFilters($dev1, $dev2) {
             } elseif ($currentFilter !== null) {
                 $currentFilter['full_details'] .= PHP_EOL.$line;
                 $currentFilter['details'] .= ' '.trim($line);
-                if (preg_match('/dropped (\d+)/', $line, $m)) {
-                    $currentFilter['dropped'] = (int)$m[1];
-                }
             }
         }
         if ($currentFilter !== null) {
             $currentFilter['dev'] = $dev;
-            if (!isset($currentFilter['dropped'])) {
-                $currentFilter['dropped'] = 0;
-            }
             $filters[] = $currentFilter;
         }
     }

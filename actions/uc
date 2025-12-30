@@ -369,9 +369,6 @@ foreach ($allHashes as $hash) {
                 $hits = $matches[1];
             }
             $details[] = array('Hits', number_format((int)$hits));
-            if (isset($filter['dropped'])) {
-                $details[] = array('Dropped', number_format($filter['dropped']));
-            }
             foreach ($details as $idx => $detail) {
                 $isLastDetail = ($idx === count($details) - 1);
                 $detailPrefix = $isLastDetail ? '└' : '├';
