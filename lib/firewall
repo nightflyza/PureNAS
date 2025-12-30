@@ -73,10 +73,10 @@ else
     nft add chain ${NFT_FAMILY} ${NFT_TABLE} forward '{ type filter hook forward priority 0; policy accept; }'
 fi
 
+nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ct state established,related accept 2>/dev/null || true
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ip saddr @banned_hosts drop 2>/dev/null || true
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ip daddr @banned_hosts drop 2>/dev/null || true
 
-nft add rule ${NFT_FAMILY} ${NFT_TABLE} input ct state established,related accept 2>/dev/null || true
 
 echo "== Configuring protected ports =="
 nft list set ${NFT_FAMILY} ${NFT_TABLE} myports_protected >/dev/null 2>&1 || \
