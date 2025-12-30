@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+PACKETS_COUNT=500000
+PACKETS_THRESHOLD=1000
+
+if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+    LOOKUP_IF="${BRIDGE_NAME}"
+else
+    LOOKUP_IF="${LAN_IF}"
+fi
+
+if [ -n "$1" ]; then
+    LOOKUP_IF="$1"
+fi
+
+if [ -n "$2" ]; then
+    PACKETS_THRESHOLD="$2"
+fi
+
+if [ -n "$3" ]; then
+    PACKETS_COUNT="$3"
+fi
+
+echo "== Looking up top PPS on ${LOOKUP_IF} =="
+echo "Usage: $0 <interface> <threshold> <packets_count>"
+
+tcpdump -tnn -c ${PACKETS_COUNT} -i ${LOOKUP_IF}  | awk -F "." '{print $1"."$2"."$3"."$4}' | sort | uniq -c | sort -nr | awk -v threshold=${PACKETS_THRESHOLD} '$1 > threshold'
