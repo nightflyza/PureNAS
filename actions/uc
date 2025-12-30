@@ -181,13 +181,6 @@ if ($filterIP !== null) {
     }
     $filterHash = $ipToHash[$filterIP];
     $allHashes = array($filterHash);
-    if (isset($classesByHash[65535])) {
-        $allHashes[] = 65535;
-    }
-    if (isset($classesByHash[65520])) {
-        $allHashes[] = 65520;
-    }
-    $allHashes = array_unique($allHashes);
     sort($allHashes);
 }
 
@@ -398,7 +391,7 @@ if (empty($allHashes)) {
     print('Total entries: '.count($allHashes).PHP_EOL);
     print('  - Active subscribers: '.$activeCount.PHP_EOL);
     print('  - Inactive subscribers: '.count($inactiveIPs).PHP_EOL);
-    print('  - Orphaned entries: '.($orphanCount-1).PHP_EOL); // -1 because of the default class
+    print('  - Orphaned entries: '.($orphanCount).PHP_EOL);
     print('Total classes: '.count($allClasses).PHP_EOL);
     print('Total qdiscs: '.count($allQdiscs).PHP_EOL);
     print('Total filters: '.count($allFilters).PHP_EOL);
