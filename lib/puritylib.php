@@ -43,7 +43,7 @@ function getAllTcClasses($dev1, $dev2) {
     $classes = array();
     $devices = array($dev1, $dev2);
     foreach ($devices as $dev) {
-        $cmd = 'tc -j class show dev '.$dev.' 2>/dev/null';
+        $cmd = 'tc -s -j class show dev '.$dev.' 2>/dev/null';
         $output = shell_exec($cmd);
         if (empty($output)) {
             continue;
@@ -87,6 +87,22 @@ function getAllTcClasses($dev1, $dev2) {
                     $parsed['burst'] = 'N/A';
                     $parsed['cburst'] = 'N/A';
                 }
+                if (isset($class['stats'])) {
+                    $stats = $class['stats'];
+                    if (isset($stats['dropped'])) {
+                        $parsed['dropped'] = (int)$stats['dropped'];
+                    }
+                    if (isset($stats['overlimits'])) {
+                        $parsed['overlimits'] = (int)$stats['overlimits'];
+                    }
+                } else {
+                    if (isset($class['dropped'])) {
+                        $parsed['dropped'] = (int)$class['dropped'];
+                    }
+                    if (isset($class['overlimits'])) {
+                        $parsed['overlimits'] = (int)$class['overlimits'];
+                    }
+                }
                 $classes[] = $parsed;
             }
         }
@@ -98,7 +114,7 @@ function getAllTcQdiscs($dev1, $dev2) {
     $qdiscs = array();
     $devices = array($dev1, $dev2);
     foreach ($devices as $dev) {
-        $cmd = 'tc -j qdisc show dev '.$dev.' 2>/dev/null';
+        $cmd = 'tc -s -j qdisc show dev '.$dev.' 2>/dev/null';
         $output = shell_exec($cmd);
         if (empty($output)) {
             continue;
@@ -107,6 +123,22 @@ function getAllTcQdiscs($dev1, $dev2) {
         if (is_array($data)) {
             foreach ($data as $qdisc) {
                 $qdisc['dev'] = $dev;
+                if (isset($qdisc['stats'])) {
+                    $stats = $qdisc['stats'];
+                    if (isset($stats['drops'])) {
+                        $qdisc['drops'] = (int)$stats['drops'];
+                    }
+                    if (isset($stats['overlimits'])) {
+                        $qdisc['overlimits'] = (int)$stats['overlimits'];
+                    }
+                } else {
+                    if (isset($qdisc['drops'])) {
+                        $qdisc['drops'] = (int)$qdisc['drops'];
+                    }
+                    if (isset($qdisc['overlimits'])) {
+                        $qdisc['overlimits'] = (int)$qdisc['overlimits'];
+                    }
+                }
                 $qdiscs[] = $qdisc;
             }
         }
@@ -178,10 +210,16 @@ function getAllTcFilters($dev1, $dev2) {
             } elseif ($currentFilter !== null) {
                 $currentFilter['full_details'] .= PHP_EOL.$line;
                 $currentFilter['details'] .= ' '.trim($line);
+                if (preg_match('/dropped (\d+)/', $line, $m)) {
+                    $currentFilter['dropped'] = (int)$m[1];
+                }
             }
         }
         if ($currentFilter !== null) {
             $currentFilter['dev'] = $dev;
+            if (!isset($currentFilter['dropped'])) {
+                $currentFilter['dropped'] = 0;
+            }
             $filters[] = $currentFilter;
         }
     }

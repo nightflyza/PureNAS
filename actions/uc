@@ -262,9 +262,12 @@ foreach ($allHashes as $hash) {
             print($nextPrefix.'  ├─ Ceil: '.$ceilFormatted.PHP_EOL);
             $hasBurst = ($burst !== 'N/A' and is_numeric($burst));
             $hasCBurst = ($cburst !== 'N/A' and is_numeric($cburst));
+            $hasDropped = isset($class['dropped']);
+            $hasOverlimits = isset($class['overlimits']);
+            $hasStats = ($hasDropped or $hasOverlimits);
             if ($hasBurst) {
                 $burstFormatted = formatBytes($burst);
-                if ($hasCBurst) {
+                if ($hasCBurst or $hasStats) {
                     print($nextPrefix.'  ├─ Burst: '.$burstFormatted.PHP_EOL);
                 } else {
                     print($nextPrefix.'  └─ Burst: '.$burstFormatted.PHP_EOL);
@@ -272,7 +275,21 @@ foreach ($allHashes as $hash) {
             }
             if ($hasCBurst) {
                 $cburstFormatted = formatBytes($cburst);
-                print($nextPrefix.'  └─ CBurst: '.$cburstFormatted.PHP_EOL);
+                if ($hasStats) {
+                    print($nextPrefix.'  ├─ CBurst: '.$cburstFormatted.PHP_EOL);
+                } else {
+                    print($nextPrefix.'  └─ CBurst: '.$cburstFormatted.PHP_EOL);
+                }
+            }
+            if ($hasStats) {
+                if ($hasDropped and $hasOverlimits) {
+                    print($nextPrefix.'  ├─ Dropped: '.number_format($class['dropped']).PHP_EOL);
+                    print($nextPrefix.'  └─ Overlimits: '.number_format($class['overlimits']).PHP_EOL);
+                } elseif ($hasOverlimits) {
+                    print($nextPrefix.'  └─ Overlimits: '.number_format($class['overlimits']).PHP_EOL);
+                } elseif ($hasDropped) {
+                    print($nextPrefix.'  └─ Dropped: '.number_format($class['dropped']).PHP_EOL);
+                }
             }
         }
     } else {
@@ -304,6 +321,12 @@ foreach ($allHashes as $hash) {
             }
             if (isset($qdisc['parent'])) {
                 $details[] = array('Parent', $qdisc['parent']);
+            }
+            if (isset($qdisc['drops'])) {
+                $details[] = array('Drops', number_format($qdisc['drops']));
+            }
+            if (isset($qdisc['overlimits'])) {
+                $details[] = array('Overlimits', number_format($qdisc['overlimits']));
             }
             foreach ($details as $idx => $detail) {
                 $isLastDetail = ($idx === count($details) - 1);
@@ -345,7 +368,10 @@ foreach ($allHashes as $hash) {
             if (preg_match('/success (\d+)/', $filter['details'], $matches)) {
                 $hits = $matches[1];
             }
-            $details[] = array('Hits', $hits);
+            $details[] = array('Hits', number_format((int)$hits));
+            if (isset($filter['dropped'])) {
+                $details[] = array('Dropped', number_format($filter['dropped']));
+            }
             foreach ($details as $idx => $detail) {
                 $isLastDetail = ($idx === count($details) - 1);
                 $detailPrefix = $isLastDetail ? '└' : '├';
