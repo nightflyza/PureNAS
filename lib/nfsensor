@@ -6,10 +6,14 @@ source "${SCRIPT_DIR}/../purenas.conf"
 
 if [ "${NETFLOW_SENSOR_ENABLED}" = "YES" ]; then
     if [ -n "${NETFLOW_COLLECTOR}" ]; then
-        if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
-            SENSOR_IF="${BRIDGE_NAME}"
+        if [ "${NAT_ENABLED}" = "YES" ]; then
+            if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+                SENSOR_IF="${BRIDGE_NAME}"
+            else
+                SENSOR_IF="${LAN_IF}"
+            fi
         else
-            SENSOR_IF="${LAN_IF}"
+            SENSOR_IF="${WAN_IF}"
         fi
         SAMPLING_RATE=${NETFLOW_SAMPLING_RATE}
         SENSOR_PARAMETERS="-s ${SAMPLING_RATE} -t udp=60 -t tcp=60 -t icmp=60 -t general=60 -t maxlife=60 -t tcp.rst=60 -t tcp.fin=60"
