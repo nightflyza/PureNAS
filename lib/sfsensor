@@ -18,22 +18,21 @@ if [ "${SFLOW_SENSOR_ENABLED}" = "YES" ]; then
         SAMPLING_RATE=${SFLOW_SAMPLING_RATE}
 
         echo "
-        sflow {
-        DNSSD = off
-        polling = 20
-        sampling = ${SFLOW_SAMPLING_RATE}
+sflow {
+ DNSSD = off
+ polling = 20
+ sampling = ${SFLOW_SAMPLING_RATE}
 
-        collector {
-        ip = ${SFLOW_COLLECTOR}
-        udpport = ${SFLOW_PORT}
-        }
+ collector {
+   ip = ${SFLOW_COLLECTOR}
+   udpport = ${SFLOW_PORT}
+   }
 
-        pcap {
-        dev = ${SENSOR_IF}
-        }
-        }
-
-        " > /etc/hsflowd.conf
+   pcap {
+    dev = ${SENSOR_IF}
+   }
+ }
+       " > /etc/hsflowd.conf
         
         echo "== Configuring sFlow sensor on ${SENSOR_IF} =="
         
