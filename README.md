@@ -19,6 +19,7 @@ Damn fast Linux-based IPoE NAS/BRAS/BNG implementation
 - **NAT Support**
 - **IP and DNS access restrictions**
 - **NetFlow sensor**
+- **sFlow sensor**
 - **SNMP server**
 - **rscriptd integration**
 
@@ -33,6 +34,7 @@ apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny sudo irqbalance
 apt install -y git expat libexpat1-dev build-essential softflowd snmpd snmp
 apt install -y php8.4-cli php8.4-mysqli php8.4-mbstring php8.4-bcmath php8.4-curl
 apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev
+apt install -y autoconf libtool pkg-config libpcap-dev libnfnetlink-dev libbpf-dev clang
 ```
 
 
@@ -165,7 +167,47 @@ cp -R /etc/PureNAS/dist/99-nat-tuning.conf /etc/sysctl.d/
 sysctl -p /etc/sysctl.d/99-nat-tuning.conf
 ```
 
-## Kernel rebuild (Required on Debian 13)
+
+## rscriptd setup
+
+### Debian 13.2
+```
+wget http://ubilling.net.ua/stg/stg-2.409.tar.gz
+tar zxvf stg-2.409.tar.gz
+cd stg-2.409/projects/rscriptd/
+./build 
+/usr/bin/gmake install
+```
+
+### Ubuntu 25.10
+```
+export CC=/usr/bin/clang
+export CXX=/usr/bin/clang++
+export CXXFLAGS=-std=c++11
+wget http://ubilling.net.ua/stg/stg-2.409.tar.gz
+tar zxvf stg-2.409.tar.gz
+cd stg-2.409/projects/rscriptd/
+./build 
+/usr/bin/gmake install
+```
+
+```
+cp -R /etc/PureNAS/dist/rscriptd/* /etc/rscriptd/
+```
+
+after that set Ubilling database connect parameters in /etc/rscriptd/dbconfig.conf 
+and rscriptd secret key in /etc/rscriptd/rscriptd.conf
+
+## hsflowd setup
+
+```
+git clone https://github.com/sflow/host-sflow.git
+cd host-sflow
+make
+make install
+```
+
+## Kernel rebuild (may be required on Debian 13)
 
 ```
 KVER="$(uname -r | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*/\1/')"
@@ -201,36 +243,6 @@ check:
 ```
 grep CONFIG_HZ /boot/config-$(uname -r)
 ```
-
-## rscriptd setup
-
-### Debian 13.2
-```
-wget http://ubilling.net.ua/stg/stg-2.409.tar.gz
-tar zxvf stg-2.409.tar.gz
-cd stg-2.409/projects/rscriptd/
-./build 
-/usr/bin/gmake install
-```
-
-### Ubuntu 25.10
-```
-export CC=/usr/bin/clang
-export CXX=/usr/bin/clang++
-export CXXFLAGS=-std=c++11
-wget http://ubilling.net.ua/stg/stg-2.409.tar.gz
-tar zxvf stg-2.409.tar.gz
-cd stg-2.409/projects/rscriptd/
-./build 
-/usr/bin/gmake install
-```
-
-```
-cp -R /etc/PureNAS/dist/rscriptd/* /etc/rscriptd/
-```
-
-after that set Ubilling database connect parameters in /etc/rscriptd/dbconfig.conf 
-and rscriptd secret key in /etc/rscriptd/rscriptd.conf
 
 
 ## PureNAS core update

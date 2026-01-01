@@ -26,6 +26,6 @@ if [ "${NETFLOW_SENSOR_ENABLED}" = "YES" ]; then
             sleep 1
         done
         softflowd -i ${SENSOR_IF} ${SENSOR_PARAMETERS} -n ${NETFLOW_COLLECTOR}
-        echo "== NetFlow sensor started export to ${NETFLOW_COLLECTOR} =="
+        echo "== NetFlow sensor started export to ${NETFLOW_COLLECTOR}:${NETFLOW_PORT} =="
     fi
 fi

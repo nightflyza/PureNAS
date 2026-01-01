@@ -26,6 +26,7 @@ echo "== Initializing PureNAS =="
 "${SCRIPT_DIR}/lib/nat"
 "${SCRIPT_DIR}/lib/shaper"
 "${SCRIPT_DIR}/lib/nfsensor"
+"${SCRIPT_DIR}/lib/sfsensor"
 "${SCRIPT_DIR}/lib/rsd"
 "${SCRIPT_DIR}/lib/snmd"
 

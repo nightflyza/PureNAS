@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${SFLOW_SENSOR_ENABLED}" = "YES" ]; then
+    if [ -n "${SFLOW_COLLECTOR}" ]; then
+        if [ "${NAT_ENABLED}" = "YES" ]; then
+            if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+                SENSOR_IF="${BRIDGE_NAME}"
+            else
+                SENSOR_IF="${LAN_IF}"
+            fi
+        else
+            SENSOR_IF="${WAN_IF}"
+        fi
+        SAMPLING_RATE=${SFLOW_SAMPLING_RATE}
+
+        echo "
+        sflow {
+        DNSSD = off
+        polling = 20
+        sampling = ${SFLOW_SAMPLING_RATE}
+
+        collector {
+        ip = ${SFLOW_COLLECTOR}
+        udpport = ${SFLOW_PORT}
+        }
+
+        pcap {
+        dev = ${SENSOR_IF}
+        }
+        }
+
+        " > /etc/hsflowd.conf
+        
+        echo "== Configuring sFlow sensor on ${SENSOR_IF} =="
+        
+        killall hsflowd >/dev/null 2>&1 || true
+        while pgrep -x hsflowd >/dev/null 2>&1; do
+            echo "== Waiting for hsflowd to shutdown if it is running... =="
+            sleep 1
+        done
+        rm -f /var/run/hsflowd.pid >/dev/null 2>&1 || true
+        hsflowd -f /etc/hsflowd.conf >/dev/null 2>&1 || true
+        echo "== sFlow sensor started export to ${SFLOW_COLLECTOR}:${SFLOW_PORT} =="
+    fi
+fi
