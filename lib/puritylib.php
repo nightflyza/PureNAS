@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Parses configuration file.
+ *
+ * @param string $file
+ *
+ * @return array
+ */
 function parseConfig($file) {
     $config = array();
     $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -15,6 +22,15 @@ function parseConfig($file) {
     return($config);
 }
 
+/**
+ * Gets active subscribers from nftables set.
+ *
+ * @param string $family
+ * @param string $table
+ * @param string $set
+ *
+ * @return array
+ */
 function getActiveSubscribers($family, $table, $set) {
     $cmd = 'nft list set '.$family.' '.$table.' '.$set.' 2>/dev/null';
     $output = shell_exec($cmd);
@@ -25,6 +41,13 @@ function getActiveSubscribers($family, $table, $set) {
     return(array_unique($matches[1]));
 }
 
+/**
+ * Calculates hash from IP address.
+ *
+ * @param string $ip
+ *
+ * @return int
+ */
 function calculateHash($ip) {
     $parts = explode('.', $ip);
     if (count($parts) < 4) {
@@ -39,6 +62,14 @@ function calculateHash($ip) {
     return($hash);
 }
 
+/**
+ * Gets all traffic control classes.
+ *
+ * @param string $dev1
+ * @param string $dev2
+ *
+ * @return array
+ */
 function getAllTcClasses($dev1, $dev2) {
     $classes = array();
     $devices = array($dev1, $dev2);
@@ -110,6 +141,14 @@ function getAllTcClasses($dev1, $dev2) {
     return($classes);
 }
 
+/**
+ * Gets all traffic control qdiscs.
+ *
+ * @param string $dev1
+ * @param string $dev2
+ *
+ * @return array
+ */
 function getAllTcQdiscs($dev1, $dev2) {
     $qdiscs = array();
     $devices = array($dev1, $dev2);
@@ -146,6 +185,13 @@ function getAllTcQdiscs($dev1, $dev2) {
     return($qdiscs);
 }
 
+/**
+ * Formats rate in bytes to human-readable format.
+ *
+ * @param mixed $rateBytes
+ *
+ * @return string
+ */
 function formatRate($rateBytes) {
     if (!is_numeric($rateBytes) or $rateBytes <= 0) {
         return 'unlimited';
@@ -164,6 +210,13 @@ function formatRate($rateBytes) {
     }
 }
 
+/**
+ * Formats bytes to human-readable format.
+ *
+ * @param mixed $bytes
+ *
+ * @return string
+ */
 function formatBytes($bytes) {
     if (!is_numeric($bytes) or $bytes <= 0) {
         return '0B';
@@ -180,6 +233,14 @@ function formatBytes($bytes) {
     }
 }
 
+/**
+ * Gets all traffic control filters.
+ *
+ * @param string $dev1
+ * @param string $dev2
+ *
+ * @return array
+ */
 function getAllTcFilters($dev1, $dev2) {
     $filters = array();
     $devices = array($dev1, $dev2);
@@ -220,6 +281,13 @@ function getAllTcFilters($dev1, $dev2) {
     return($filters);
 }
 
+/**
+ * Formats rate string for display.
+ *
+ * @param string $rateStr
+ *
+ * @return string
+ */
 function formatRateDisplay($rateStr) {
     if ($rateStr === 'unlimited') {
         return $rateStr;
@@ -236,6 +304,11 @@ function formatRateDisplay($rateStr) {
     return $rateStr;
 }
 
+/**
+ * Gets all ARP entries.
+ *
+ * @return array
+ */
 function getAllArpEntries() {
     $arpEntries = array();
     $cmd = 'ip neigh show 2>/dev/null';
@@ -274,6 +347,13 @@ function getAllArpEntries() {
     return($arpEntries);
 }
 
+/**
+ * Formats ARP flag for display.
+ *
+ * @param string $flag
+ *
+ * @return string
+ */
 function formatArpFlag($flag) {
     if (empty($flag)) {
         return '-';
@@ -281,12 +361,27 @@ function formatArpFlag($flag) {
     return '['.$flag.']';
 }
 
+/**
+ * Formats down/up rates for display.
+ *
+ * @param string $downRate
+ * @param string $upRate
+ *
+ * @return string
+ */
 function formatRates($downRate, $upRate) {
     $downFormatted = formatRateDisplay($downRate);
     $upFormatted = formatRateDisplay($upRate);
     return $downFormatted.' / '.$upFormatted;
 }
 
+/**
+ * Renders table header.
+ *
+ * @param bool $extensive
+ *
+ * @return void
+ */
 function renderHeader($extensive) {
     if ($extensive) {
         printf("%-15s %-10s %-18s %-6s %-10s %-12s %-8s %-8s %-8s %-8s %-12s %-10s %-24s %-10s\n",
@@ -301,6 +396,13 @@ function renderHeader($extensive) {
     }
 }
 
+/**
+ * Parses network CIDR notation.
+ *
+ * @param string $network
+ *
+ * @return array|null
+ */
 function parseNetwork($network) {
     if (preg_match('/^(\d+\.\d+\.\d+\.\d+)\/(\d+)$/', $network, $matches)) {
         $ip = $matches[1];
@@ -322,6 +424,14 @@ function parseNetwork($network) {
     return(null);
 }
 
+/**
+ * Generates sequential IP addresses.
+ *
+ * @param array $networkInfo
+ * @param int $sampleSubscribersCount
+ *
+ * @return array|null
+ */
 function generateSequentialIPs($networkInfo, $sampleSubscribersCount) {
     $network = $networkInfo['network'];
     $broadcast = $networkInfo['broadcast'];
@@ -383,6 +493,21 @@ function generateSequentialIPs($networkInfo, $sampleSubscribersCount) {
     return($ips);
 }
 
+/**
+ * Renders subscriber table row.
+ *
+ * @param string $ip
+ * @param string $state
+ * @param string|null $mac
+ * @param string $flag
+ * @param int|null $hash
+ * @param bool $extensive
+ * @param array $classesByHash
+ * @param string $ifbIf
+ * @param array $filtersByIP
+ *
+ * @return void
+ */
 function renderSubscriberRow($ip, $state, $mac, $flag, $hash, $extensive, $classesByHash, $ifbIf, $filtersByIP) {
     $macDisplay = isset($mac) ? $mac : '-';
     $flagDisplay = formatArpFlag($flag);
