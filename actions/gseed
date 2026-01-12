@@ -30,15 +30,18 @@ if ($uid !== 0) {
 }
 
 print('=== Seed Script ==='.PHP_EOL);
-print('Usage: gseed [count] [fast]'.PHP_EOL);
+print('Usage: gseed run [count] [fast]'.PHP_EOL);
 
+if (!isset($argv[1]) or $argv[1] !== 'run') {
+    exit(0);
+}
 
 $fastMode = false;
-if (isset($argv[1]) and !empty($argv[1])) {
-    if ($argv[1] === 'fast') {
+if (isset($argv[2]) and !empty($argv[2])) {
+    if ($argv[2] === 'fast') {
         $fastMode = true;
-        if (isset($argv[2]) and !empty($argv[2])) {
-            $cliCount = (int)$argv[2];
+        if (isset($argv[3]) and !empty($argv[3])) {
+            $cliCount = (int)$argv[3];
             if ($cliCount > 0) {
                 $sampleSubscribersCount = $cliCount;
             } else {
@@ -47,14 +50,14 @@ if (isset($argv[1]) and !empty($argv[1])) {
             }
         }
     } else {
-        $cliCount = (int)$argv[1];
+        $cliCount = (int)$argv[2];
         if ($cliCount > 0) {
             $sampleSubscribersCount = $cliCount;
         } else {
             fwrite(STDERR, 'Error: Count must be a positive integer'.PHP_EOL);
             exit(1);
         }
-        if (isset($argv[2]) and $argv[2] === 'fast') {
+        if (isset($argv[3]) and $argv[3] === 'fast') {
             $fastMode = true;
         }
     }
