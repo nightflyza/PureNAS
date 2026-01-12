@@ -282,4 +282,5 @@ it upgrades and removes everything except your purenas.conf main config file.
 
 ## Links 
 
+- Integration with [Ubilling and rscriptd](https://wiki.ubilling.net.ua/doku.php?id=purenasrscriptd)
 - Based on [original UBRsciptdDebianNAS project](https://github.com/pautiina/UBRsciptdDebianNAS)
