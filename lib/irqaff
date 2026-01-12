@@ -26,6 +26,8 @@ if [ "${IRQ_AFFINITY_ENABLED}" = "YES" ]; then
         done
     fi
 
+    global_cpu_index=0
+
     cpu_to_mask() {
     cpu="$1"
     word=$((cpu / 32))
@@ -97,7 +99,6 @@ balance_iface() {
     echo "== NUMA node: $node =="
 
     irq_count=0
-    cpu_index=0
 
     device_path=$(readlink -f "$sysfs/device" 2>/dev/null || echo "")
     device_name=""
@@ -148,14 +149,14 @@ balance_iface() {
     fi
 
     for irq in $irq_list; do
-        cpu=${cpu_array[$((cpu_index % cpu_count))]}
+        cpu=${cpu_array[$((global_cpu_index % cpu_count))]}
         mask=$(cpu_to_mask "$cpu")
         echo "$mask" > "/proc/irq/$irq/smp_affinity" 2>/dev/null
         if [ $? -eq 0 ]; then
             echo "IRQ $irq => CPU $cpu (mask: $mask)"
             irq_count=$((irq_count + 1))
         fi
-        cpu_index=$((cpu_index + 1))
+        global_cpu_index=$((global_cpu_index + 1))
     done
 
     if [ "$irq_count" -gt 0 ]; then
