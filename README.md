@@ -55,32 +55,6 @@ apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves r
 git clone https://github.com/nightflyza/PureNAS.git /etc/PureNAS
 ```
 
-## Project Structure
-
-```
-/etc/PureNAS/
-├── init                 # Main initialization script
-├── purenas.conf         # Main configuration file
-├── dist                 # Some configs and presets to configure services
-├── actions/             # Command scripts
-    ├── subscriber_allow      # allow subscriber access to internet
-    ├── subscriber_disallow   # disallow subscriber access to internet
-    ├── subscriber_shape      # Apply bandwidth limits to subscriber
-    ├── subscriber_unshape    # Remove bandwidth limits from subscriber
-    ├── subscriber_arp        # Make subscriber IP-MAC permanent record
-    ├── subscriber_unarp      # Remove subscriber IP-MAC permanent record
-    ├── subscribers_show      # List all active subscribers
-    ├── ip_ban                # Set an IP address to block list
-    ├── ip_unban              # Remove an IP address from block list
-    ├── dns_allow             # Allow DNS server
-    ├── dns_disallow          # Disallow DNS server
-    ├── portinc_block         # Block incoming port to users network
-    ├── portinc_unblock       # Unblock incoming port to users network
-    ├── portout_block         # Block outgoing port from users network
-    ├── portout_unblock       # Unblock outgoing port from users network
-    ├── uc                    # Subscribers Tree Debugger
-        
-```
 
 ## Quick Start
 
@@ -141,14 +115,6 @@ git clone https://github.com/nightflyza/PureNAS.git /etc/PureNAS
    ```
 
 
-## Scheme of the tc hash structure
-
-```
-[Subscriber IP]
-        |
-        v
-[Hash bucket] ---> [HTB class] ---> [Rate / Ceil] ---> [qdisc]
-```
 
 ## Automatic start at boot
 
@@ -257,6 +223,62 @@ Just run action
 
 it upgrades and removes everything except your purenas.conf main config file.
 
+## Misc info
+
+### Project Structure
+
+```
+/etc/PureNAS/
+├── init                 # Main initialization script
+├── purenas.conf         # Main configuration file
+├── dist                 # Some configs and presets to configure services
+├── actions/             # Command scripts
+    ├── subscriber_allow      # allow subscriber access to internet
+    ├── subscriber_disallow   # disallow subscriber access to internet
+    ├── subscriber_shape      # Apply bandwidth limits to subscriber
+    ├── subscriber_unshape    # Remove bandwidth limits from subscriber
+    ├── subscriber_arp        # Make subscriber IP-MAC permanent record
+    ├── subscriber_unarp      # Remove subscriber IP-MAC permanent record
+    ├── subscribers_show      # List all active subscribers
+    ├── ip_ban                # Set an IP address to block list
+    ├── ip_unban              # Remove an IP address from block list
+    ├── dns_allow             # Allow DNS server
+    ├── dns_disallow          # Disallow DNS server
+    ├── portinc_block         # Block incoming port to users network
+    ├── portinc_unblock       # Unblock incoming port to users network
+    ├── portout_block         # Block outgoing port from users network
+    ├── portout_unblock       # Unblock outgoing port from users network
+    ├── uc                    # Subscribers Tree Debugger
+        
+```
+
+### Firewall scheme
+
+```
+[Packet] ──┬──> [INPUT] ──> Est/Rel? ──> Banned? ──> Protected Port? ──┬──> Safe Zone? ──> [Accept]
+           │                                                           └──> Not Safe ──> [Drop]
+           │
+           └──> [FORWARD] ──> Banned? ──> Est/Rel? ──> DNS? ──> Allowed Always?
+                                                                    │
+                                                                    v
+                                            Isolation? ──> Blocked Ports? ──> Active? ──> [Accept/Drop]
+```
+
+### Scheme of the tc hash structure
+
+```
+[Subscriber IP]
+        |
+        v
+[Hash bucket] ---> [HTB class] ---> [Rate / Ceil] ---> [qdisc]
+```
+
+### IRQ affinity 
+
+```
+[Interface] --> [PCI Device] --> [NUMA Node] --> [NUMA CPUs/All CPUs] --> [CPU Mask] --> [IRQs] --> [CPUs]
+  
+```
 
 ## Links 
 
