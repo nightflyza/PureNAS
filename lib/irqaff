@@ -109,13 +109,97 @@ balance_iface() {
 
     irq_list=""
 
+    if [ -f "$sysfs/device/irq" ]; then
+        irq=$(cat "$sysfs/device/irq" 2>/dev/null || echo "")
+        if [ -n "$irq" ] && [[ "$irq" =~ ^[0-9]+$ ]] && [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
+            irq_list="${irq_list}${irq_list:+ }$irq"
+        fi
+    fi
+
     if [ -f "$sysfs/device/msi_irqs" ]; then
         while IFS= read -r irq; do
             [ -z "$irq" ] && continue
             if [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
-                irq_list="${irq_list}${irq_list:+ }$irq"
+                if ! echo "$irq_list" | grep -q "\b$irq\b"; then
+                    irq_list="${irq_list}${irq_list:+ }$irq"
+                fi
             fi
         done < "$sysfs/device/msi_irqs"
+    fi
+
+    if [ -d "$sysfs/device/msi_irqs" ]; then
+        for msi_irq_file in "$sysfs/device/msi_irqs"/*; do
+            if [ -f "$msi_irq_file" ]; then
+                irq=$(cat "$msi_irq_file" 2>/dev/null || echo "")
+                if [ -n "$irq" ] && [[ "$irq" =~ ^[0-9]+$ ]] && [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
+                    if ! echo "$irq_list" | grep -q "\b$irq\b"; then
+                        irq_list="${irq_list}${irq_list:+ }$irq"
+                    fi
+                fi
+            fi
+        done
+    fi
+
+    if [ -z "$irq_list" ] && [ -n "$device_path" ]; then
+        pci_device_path=""
+        if [[ "$device_path" == */pci* ]]; then
+            pci_device_path="$device_path"
+            while [ -n "$pci_device_path" ] && [ "$pci_device_path" != "/" ]; do
+                if [[ "$pci_device_path" == */0000:* ]]; then
+                    break
+                fi
+                pci_device_path=$(dirname "$pci_device_path")
+            done
+        fi
+        
+        for irq_dir in /proc/irq/*/; do
+            [ ! -d "$irq_dir" ] && continue
+            irq=$(basename "$irq_dir")
+            if ! [[ "$irq" =~ ^[0-9]+$ ]]; then
+                continue
+            fi
+            
+            if [ ! -w "$irq_dir/smp_affinity" ]; then
+                continue
+            fi
+            
+            found=false
+            
+            if [ -n "$device_name" ] && [ -d "$irq_dir$device_name" ]; then
+                found=true
+            fi
+            
+            if [ "$found" = false ] && [ -L "$irq_dir../" ]; then
+                irq_device=$(readlink -f "$irq_dir../" 2>/dev/null || echo "")
+                if [ "$irq_device" = "$device_path" ] || [ "$irq_device" = "$pci_device_path" ]; then
+                    found=true
+                fi
+            fi
+            
+            if [ "$found" = false ]; then
+                for subdir in "$irq_dir"*/; do
+                    if [ -L "$subdir" ]; then
+                        subdir_target=$(readlink -f "$subdir" 2>/dev/null || echo "")
+                        if [ "$subdir_target" = "$device_path" ] || [ "$subdir_target" = "$pci_device_path" ]; then
+                            found=true
+                            break
+                        fi
+                    elif [ -d "$subdir" ]; then
+                        subdir_name=$(basename "$subdir")
+                        if [ "$subdir_name" = "$device_name" ]; then
+                            found=true
+                            break
+                        fi
+                    fi
+                done
+            fi
+            
+            if [ "$found" = true ]; then
+                if ! echo "$irq_list" | grep -q "\b$irq\b"; then
+                    irq_list="${irq_list}${irq_list:+ }$irq"
+                fi
+            fi
+        done
     fi
 
     if [ -z "$irq_list" ] && [ -n "$device_name" ]; then
@@ -128,6 +212,27 @@ balance_iface() {
         done
     fi
 
+    if [ -z "$irq_list" ] && [ -n "$device_path" ]; then
+        if [ -f "$device_path/irq" ]; then
+            irq=$(cat "$device_path/irq" 2>/dev/null || echo "")
+            if [ -n "$irq" ] && [[ "$irq" =~ ^[0-9]+$ ]] && [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
+                if ! echo "$irq_list" | grep -q "\b$irq\b"; then
+                    irq_list="${irq_list}${irq_list:+ }$irq"
+                fi
+            fi
+        fi
+        
+        parent_device=$(dirname "$device_path" 2>/dev/null || echo "")
+        if [ -n "$parent_device" ] && [ -f "$parent_device/irq" ]; then
+            irq=$(cat "$parent_device/irq" 2>/dev/null || echo "")
+            if [ -n "$irq" ] && [[ "$irq" =~ ^[0-9]+$ ]] && [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
+                if ! echo "$irq_list" | grep -q "\b$irq\b"; then
+                    irq_list="${irq_list}${irq_list:+ }$irq"
+                fi
+            fi
+        fi
+    fi
+
     if [ -z "$irq_list" ] && [ -n "$device_name" ]; then
         irq_lines=$(grep -E "(^|[[:space:]])$device_name([[:space:],]|$)" /proc/interrupts 2>/dev/null || true)
         if [ -n "$irq_lines" ]; then
@@ -136,6 +241,23 @@ balance_iface() {
                 irq=$(echo "$line" | awk -F: '{print $1}' | tr -d ' ')
                 if [ -n "$irq" ] && [[ "$irq" =~ ^[0-9]+$ ]] && [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
                     if [ -d "/proc/irq/$irq/$device_name" ]; then
+                        if ! echo "$irq_list" | grep -q "\b$irq\b"; then
+                            irq_list="${irq_list}${irq_list:+ }$irq"
+                        fi
+                    fi
+                fi
+            done <<< "$irq_lines"
+        fi
+    fi
+
+    if [ -z "$irq_list" ]; then
+        irq_lines=$(grep "$iface" /proc/interrupts 2>/dev/null || true)
+        if [ -n "$irq_lines" ]; then
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                irq=$(echo "$line" | awk -F: '{print $1}' | tr -d ' ')
+                if [ -n "$irq" ] && [[ "$irq" =~ ^[0-9]+$ ]] && [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
+                    if ! echo "$irq_list" | grep -q "\b$irq\b"; then
                         irq_list="${irq_list}${irq_list:+ }$irq"
                     fi
                 fi
