@@ -52,60 +52,54 @@ if [ "${IRQ_AFFINITY_ENABLED}" = "YES" ]; then
 
         if [ ! -d "/sys/class/net/$iface" ]; then
             echo "[!] Interface $iface not found, skipping"
-            return 1
+        else
+            echo "[*] Processing interface: $iface"
+
+            pci_dev=$(basename "$(readlink /sys/class/net/$iface/device)" 2>/dev/null || echo "")
+            if [ -z "$pci_dev" ]; then
+                echo "[!] Could not detect PCI device for $iface, skipping"
+            else
+                echo "[*] PCI device: $pci_dev"
+
+                local numa_node
+                numa_node=$(cat /sys/bus/pci/devices/$pci_dev/numa_node 2>/dev/null || echo "-1")
+
+                if [ "$numa_node" -lt 0 ]; then
+                    echo "[!] NUMA node not detected for $iface, skipping"
+                else
+                    echo "[*] NUMA node: $numa_node"
+
+                    local cpu_list
+                    cpu_list=$(cat /sys/devices/system/node/node$numa_node/cpulist 2>/dev/null || echo "")
+                    if [ -z "$cpu_list" ]; then
+                        echo "[!] Could not get CPU list for NUMA node $numa_node, skipping"
+                    else
+                        echo "[*] CPU list: $cpu_list"
+
+                        local cpu_mask
+                        cpu_mask=$(cpulist_to_mask "$cpu_list")
+                        echo "[*] CPU mask: $cpu_mask"
+
+                        local irqs
+                        irqs=$(grep "$iface" /proc/interrupts 2>/dev/null | awk '{print $1}' | tr -d ':' || echo "")
+
+                        if [ -z "$irqs" ]; then
+                            echo "[!] IRQs not found for $iface, skipping"
+                        else
+                            for irq in $irqs; do
+                                echo "$cpu_mask" > /proc/irq/$irq/smp_affinity 2>/dev/null || {
+                                    echo "[!] Failed to set affinity for IRQ $irq"
+                                    continue
+                                }
+                                echo "[+] IRQ $irq => NUMA $numa_node"
+                            done
+
+                            echo "== All IRQs for $iface assigned to CPUs (NUMA node $numa_node) =="
+                        fi
+                    fi
+                fi
+            fi
         fi
-
-        echo "[*] Processing interface: $iface"
-
-        pci_dev=$(basename "$(readlink /sys/class/net/$iface/device)" 2>/dev/null || echo "")
-        if [ -z "$pci_dev" ]; then
-            echo "[!] Could not detect PCI device for $iface, skipping"
-            return 1
-        fi
-
-        echo "[*] PCI device: $pci_dev"
-
-        local numa_node
-        numa_node=$(cat /sys/bus/pci/devices/$pci_dev/numa_node 2>/dev/null || echo "-1")
-
-        if [ "$numa_node" -lt 0 ]; then
-            echo "[!] NUMA node not detected for $iface, skipping"
-            return 1
-        fi
-
-        echo "[*] NUMA node: $numa_node"
-
-        local cpu_list
-        cpu_list=$(cat /sys/devices/system/node/node$numa_node/cpulist 2>/dev/null || echo "")
-        if [ -z "$cpu_list" ]; then
-            echo "[!] Could not get CPU list for NUMA node $numa_node, skipping"
-            return 1
-        fi
-
-        echo "[*] CPU list: $cpu_list"
-
-        local cpu_mask
-        cpu_mask=$(cpulist_to_mask "$cpu_list")
-        echo "[*] CPU mask: $cpu_mask"
-
-        local irqs
-        irqs=$(grep "$iface" /proc/interrupts 2>/dev/null | awk '{print $1}' | tr -d ':' || echo "")
-
-        if [ -z "$irqs" ]; then
-            echo "[!] IRQs not found for $iface, skipping"
-            return 1
-        fi
-
-        for irq in $irqs; do
-            echo "$cpu_mask" > /proc/irq/$irq/smp_affinity 2>/dev/null || {
-                echo "[!] Failed to set affinity for IRQ $irq"
-                continue
-            }
-            echo "[+] IRQ $irq => NUMA $numa_node"
-        done
-
-        echo "== All IRQs for $iface assigned to CPUs (NUMA node $numa_node) =="
-        return 0
     }
 
     for interface in "$LAN_IF" "$WAN_IF"; do
