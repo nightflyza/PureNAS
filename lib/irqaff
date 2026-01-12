@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${IRQ_AFFINITY_ENABLED}" = "YES" ]; then
+    echo "== Applying IRQ affinity =="
+
+    if systemctl is-active --quiet irqbalance 2>/dev/null; then
+        echo "== Stopping irqbalance service =="
+        systemctl stop irqbalance 2>/dev/null || true
+    fi
+
+    if systemctl is-enabled --quiet irqbalance 2>/dev/null; then
+        echo "== Disabling irqbalance service =="
+        systemctl disable irqbalance 2>/dev/null || true
+    fi
+
+    if pgrep -x irqbalance >/dev/null 2>&1; then
+        echo "== Killing irqbalance process =="
+        killall irqbalance >/dev/null 2>&1 || true
+        while pgrep -x irqbalance >/dev/null 2>&1; do
+            echo "== Waiting for irqbalance to shutdown =="
+            sleep 1
+        done
+    fi
+
+cpu_to_mask() {
+    cpu="$1"
+    word=$((cpu / 32))
+    bit=$((cpu % 32))
+
+    i=0
+    mask=""
+
+    while [ "$i" -le "$word" ]; do
+        if [ "$i" -eq "$word" ]; then
+            val=$(printf "%08x" $((1 << bit)))
+        else
+            val="00000000"
+        fi
+
+        if [ -z "$mask" ]; then
+            mask="$val"
+        else
+            mask="$val,$mask"
+        fi
+
+        i=$((i + 1))
+    done
+
+    echo "$mask"
+}
+
+get_cpus_for_node() {
+    node="$1"
+    if [ "$node" -lt 0 ]; then
+        seq 0 $(( $(nproc) - 1 ))
+    else
+        cat /sys/devices/system/node/node"$node"/cpulist 2>/dev/null | \
+        tr ',' '\n' | awk -F- '
+        {
+            if (NF == 1) print $1
+            else for (i=$1;i<=$2;i++) print i
+        }' || seq 0 $(( $(nproc) - 1 ))
+    fi
+}
+
+balance_iface() {
+    iface="$1"
+
+    sysfs="/sys/class/net/$iface"
+    [ ! -d "$sysfs" ] && return
+
+    node=$(cat "$sysfs/device/numa_node" 2>/dev/null || echo -1)
+    cpus=$(get_cpus_for_node "$node")
+    
+    if [ -z "$cpus" ]; then
+        cpus=$(seq 0 $(( $(nproc) - 1 )))
+    fi
+
+    cpu_array=($cpus)
+    cpu_count=${#cpu_array[@]}
+
+    if [ "$cpu_count" -eq 0 ]; then
+        echo "== Warning: No CPUs found for interface $iface =="
+        return
+    fi
+
+    cpu_index=0
+
+    while IFS= read -r line; do
+        irq=$(echo "$line" | awk -F: '{print $1}' | tr -d ' ')
+        
+        if [ -z "$irq" ] || [ ! -d "/proc/irq/$irq" ]; then
+            continue
+        fi
+
+        cpu=${cpu_array[$((cpu_index % cpu_count))]}
+        mask=$(cpu_to_mask "$cpu")
+
+        if [ -w "/proc/irq/$irq/smp_affinity" ]; then
+            echo "$mask" > "/proc/irq/$irq/smp_affinity"
+            echo "$iface IRQ $irq → CPU $cpu (NUMA $node)"
+        fi
+
+        cpu_index=$((cpu_index + 1))
+    done < <(grep "$iface" /proc/interrupts)
+}
+
+balance_iface "$LAN_IF"
+balance_iface "$WAN_IF"
+
+fi
