@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${RPS_ENABLED}" = "YES" ]; then
+    echo "== Configuring RPS =="
+
+get_cpus_for_node() {
+    node="$1"
+    if [ "$node" -lt 0 ]; then
+        seq 0 $(( $(nproc) - 1 ))
+    else
+        cat /sys/devices/system/node/node"$node"/cpulist 2>/dev/null | \
+        tr ',' '\n' | awk -F- '
+        {
+            if (NF == 1) print $1
+            else for (i=$1;i<=$2;i++) print i
+        }' || seq 0 $(( $(nproc) - 1 ))
+    fi
+}
+
+cpus_to_rps_mask() {
+    cpus="$1"
+    mask=0
+    
+    for cpu in $cpus; do
+        mask=$((mask | (1 << cpu)))
+    done
+    
+    printf "%x" "$mask"
+}
+
+configure_rps_iface() {
+    iface="$1"
+    
+    sysfs="/sys/class/net/$iface"
+    if [ ! -d "$sysfs" ]; then
+        echo "== Warning: Interface $iface does not exist =="
+        return
+    fi
+    
+    node=$(cat "$sysfs/device/numa_node" 2>/dev/null || echo -1)
+    cpus=$(get_cpus_for_node "$node")
+    
+    if [ -z "$cpus" ]; then
+        cpus=$(seq 0 $(( $(nproc) - 1 )))
+    fi
+    
+    echo "== Configuring RPS for interface $iface (NUMA node: $node) =="
+    echo "== Using CPUs: $(echo $cpus | tr '\n' ' ') =="
+    
+    rps_mask=$(cpus_to_rps_mask "$cpus")
+    
+    queue_count=0
+    for queue in "$sysfs/queues/rx-"*; do
+        if [ -d "$queue" ] && [ -w "$queue/rps_cpus" ]; then
+            echo "$rps_mask" > "$queue/rps_cpus" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo 4096 > "$queue/rps_flow_cnt" 2>/dev/null || true
+                queue_count=$((queue_count + 1))
+            fi
+        fi
+    done
+    
+    if [ "$queue_count" -gt 0 ]; then
+        echo "== Configured RPS for $queue_count RX queue(s) on $iface =="
+    else
+        echo "== No RX queues found for interface $iface =="
+    fi
+}
+
+sysctl -w net.core.rps_sock_flow_entries=32768 >/dev/null 2>&1 || true
+
+configure_rps_iface "$LAN_IF"
+configure_rps_iface "$WAN_IF"
+
+echo "== RPS configured =="
+fi
