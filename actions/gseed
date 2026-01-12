@@ -29,7 +29,7 @@ if ($uid !== 0) {
     exit(1);
 }
 
-print('=== Seed Script ==='.PHP_EOL);
+print('=== Sample users generation seed script ==='.PHP_EOL);
 print('Usage: gseed run [count] [fast]'.PHP_EOL);
 
 if (!isset($argv[1]) or $argv[1] !== 'run') {
