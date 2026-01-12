@@ -21,6 +21,7 @@ get_cpus_for_node() {
     fi
 }
 
+# NOTE: valid only for CPU < 32
 cpus_to_rps_mask() {
     cpus="$1"
     mask=0
