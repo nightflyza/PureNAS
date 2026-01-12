@@ -26,7 +26,7 @@ if [ "${IRQ_AFFINITY_ENABLED}" = "YES" ]; then
         done
     fi
 
-cpu_to_mask() {
+    cpu_to_mask() {
     cpu="$1"
     word=$((cpu / 32))
     bit=$((cpu % 32))
@@ -70,8 +70,13 @@ get_cpus_for_node() {
 balance_iface() {
     iface="$1"
 
+    echo "== Balancing IRQs for interface $iface =="
+
     sysfs="/sys/class/net/$iface"
-    [ ! -d "$sysfs" ] && return
+    if [ ! -d "$sysfs" ]; then
+        echo "== Warning: Interface $iface does not exist =="
+        return
+    fi
 
     node=$(cat "$sysfs/device/numa_node" 2>/dev/null || echo -1)
     cpus=$(get_cpus_for_node "$node")
@@ -84,32 +89,81 @@ balance_iface() {
     cpu_count=${#cpu_array[@]}
 
     if [ "$cpu_count" -eq 0 ]; then
-        echo "== Warning: No CPUs found for interface $iface =="
+        echo "==  Warning: No CPUs found =="
         return
     fi
 
+    echo "== Using CPUs: $(echo $cpus | tr '\n' ' ') =="
+    echo "== NUMA node: $node =="
+
+    irq_count=0
     cpu_index=0
 
-    while IFS= read -r line; do
-        irq=$(echo "$line" | awk -F: '{print $1}' | tr -d ' ')
-        
-        if [ -z "$irq" ] || [ ! -d "/proc/irq/$irq" ]; then
-            continue
-        fi
+    device_path=$(readlink -f "$sysfs/device" 2>/dev/null || echo "")
+    device_name=""
+    
+    if [ -n "$device_path" ]; then
+        device_name=$(basename "$device_path")
+    fi
 
+    irq_list=""
+
+    if [ -f "$sysfs/device/msi_irqs" ]; then
+        while IFS= read -r irq; do
+            [ -z "$irq" ] && continue
+            if [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
+                irq_list="${irq_list}${irq_list:+ }$irq"
+            fi
+        done < "$sysfs/device/msi_irqs"
+    fi
+
+    if [ -z "$irq_list" ] && [ -n "$device_name" ]; then
+        for irq_dir in /proc/irq/*/; do
+            [ ! -d "$irq_dir" ] && continue
+            irq=$(basename "$irq_dir")
+            if [[ "$irq" =~ ^[0-9]+$ ]] && [ -d "$irq_dir$device_name" ] && [ -w "$irq_dir/smp_affinity" ]; then
+                irq_list="${irq_list}${irq_list:+ }$irq"
+            fi
+        done
+    fi
+
+    if [ -z "$irq_list" ] && [ -n "$device_name" ]; then
+        irq_lines=$(grep -E "(^|[[:space:]])$device_name([[:space:],]|$)" /proc/interrupts 2>/dev/null || true)
+        if [ -n "$irq_lines" ]; then
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                irq=$(echo "$line" | awk -F: '{print $1}' | tr -d ' ')
+                if [ -n "$irq" ] && [[ "$irq" =~ ^[0-9]+$ ]] && [ -d "/proc/irq/$irq" ] && [ -w "/proc/irq/$irq/smp_affinity" ]; then
+                    if [ -d "/proc/irq/$irq/$device_name" ]; then
+                        irq_list="${irq_list}${irq_list:+ }$irq"
+                    fi
+                fi
+            done <<< "$irq_lines"
+        fi
+    fi
+
+    if [ -z "$irq_list" ]; then
+        echo "== No IRQs found for interface $iface (device: ${device_name:-unknown}) =="
+        return
+    fi
+
+    for irq in $irq_list; do
         cpu=${cpu_array[$((cpu_index % cpu_count))]}
         mask=$(cpu_to_mask "$cpu")
-
-        if [ -w "/proc/irq/$irq/smp_affinity" ]; then
-            echo "$mask" > "/proc/irq/$irq/smp_affinity"
-            echo "$iface IRQ $irq → CPU $cpu (NUMA $node)"
+        echo "$mask" > "/proc/irq/$irq/smp_affinity" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            echo "IRQ $irq => CPU $cpu (mask: $mask)"
+            irq_count=$((irq_count + 1))
         fi
-
         cpu_index=$((cpu_index + 1))
-    done < <(grep "$iface" /proc/interrupts)
+    done
+
+    if [ "$irq_count" -gt 0 ]; then
+        echo "Balanced $irq_count IRQ(s) for interface $iface"
+    fi
 }
 
-balance_iface "$LAN_IF"
-balance_iface "$WAN_IF"
+    balance_iface "$LAN_IF"
+    balance_iface "$WAN_IF"
 
 fi
