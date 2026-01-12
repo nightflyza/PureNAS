@@ -69,37 +69,53 @@ if [ "${IRQ_AFFINITY_ENABLED}" = "YES" ]; then
                     local numa_node
                     numa_node=$(cat /sys/bus/pci/devices/$pci_dev/numa_node 2>/dev/null || echo "-1")
 
+                    local cpu_list
                     if [ "$numa_node" -lt 0 ]; then
-                        echo "[!] NUMA node not detected for $iface, skipping"
+                        echo "[*] NUMA not available, using all CPUs"
+                        local max_cpu
+                        max_cpu=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || echo "0")
+                        if [ "$max_cpu" -eq 0 ]; then
+                            echo "[!] Could not determine CPU count, skipping"
+                        else
+                            max_cpu=$((max_cpu - 1))
+                            cpu_list="0-$max_cpu"
+                        fi
                     else
                         echo "[*] NUMA node: $numa_node"
-
-                        local cpu_list
                         cpu_list=$(cat /sys/devices/system/node/node$numa_node/cpulist 2>/dev/null || echo "")
-                        if [ -z "$cpu_list" ]; then
-                            echo "[!] Could not get CPU list for NUMA node $numa_node, skipping"
+                    fi
+
+                    if [ -z "$cpu_list" ]; then
+                        echo "[!] Could not get CPU list, skipping"
+                    else
+                        echo "[*] CPU list: $cpu_list"
+
+                        local cpu_mask
+                        cpu_mask=$(cpulist_to_mask "$cpu_list")
+                        echo "[*] CPU mask: $cpu_mask"
+
+                        local irqs
+                        irqs=$(grep "$iface" /proc/interrupts 2>/dev/null | awk '{print $1}' | tr -d ':' || echo "")
+
+                        if [ -z "$irqs" ]; then
+                            echo "[!] IRQs not found for $iface, skipping"
                         else
-                            echo "[*] CPU list: $cpu_list"
-
-                            local cpu_mask
-                            cpu_mask=$(cpulist_to_mask "$cpu_list")
-                            echo "[*] CPU mask: $cpu_mask"
-
-                            local irqs
-                            irqs=$(grep "$iface" /proc/interrupts 2>/dev/null | awk '{print $1}' | tr -d ':' || echo "")
-
-                            if [ -z "$irqs" ]; then
-                                echo "[!] IRQs not found for $iface, skipping"
-                            else
-                                for irq in $irqs; do
-                                    echo "$cpu_mask" > /proc/irq/$irq/smp_affinity 2>/dev/null || {
-                                        echo "[!] Failed to set affinity for IRQ $irq"
-                                        continue
-                                    }
+                            for irq in $irqs; do
+                                echo "$cpu_mask" > /proc/irq/$irq/smp_affinity 2>/dev/null || {
+                                    echo "[!] Failed to set affinity for IRQ $irq"
+                                    continue
+                                }
+                                if [ "$numa_node" -ge 0 ]; then
                                     echo "[+] IRQ $irq => NUMA $numa_node"
-                                done
+                                else
+                                    echo "[+] IRQ $irq => all CPUs"
+                                fi
+                            done
 
+                            if [ "$numa_node" -ge 0 ]; then
                                 echo "== All IRQs for $iface assigned to CPUs (NUMA node $numa_node) =="
+                            else
+                                echo "== All IRQs for $iface assigned to all CPUs =="
                             fi
                         fi
                     fi
@@ -108,11 +124,13 @@ if [ "${IRQ_AFFINITY_ENABLED}" = "YES" ]; then
         fi
     }
 
-    for interface in "$LAN_IF" "$WAN_IF"; do
-        if [ -n "$interface" ]; then
-            apply_irq_affinity "$interface"
-        fi
-    done
+    if [ -n "$LAN_IF" ]; then
+        apply_irq_affinity "$LAN_IF"
+    fi
+
+    if [ -n "$WAN_IF" ]; then
+        apply_irq_affinity "$WAN_IF"
+    fi
 
 
 fi
