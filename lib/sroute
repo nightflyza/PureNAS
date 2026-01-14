@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ -n "${STATIC_ROUTES:-}" ]; then
+    echo "== Configuring static routes =="
+    for route_entry in ${STATIC_ROUTES}; do
+        if [[ "${route_entry}" =~ ^([^:]+):(.+)$ ]]; then
+            destination="${BASH_REMATCH[1]}"
+            gateway="${BASH_REMATCH[2]}"
+            
+            ip route del "${destination}" 2>/dev/null || true
+            if ip route add "${destination}" via "${gateway}" 2>/dev/null; then
+                echo "== Configured static route ${destination} via ${gateway} =="
+            else
+                echo "== Error: Failed to configure static route ${destination} via ${gateway} =="
+            fi
+        else
+            echo "== Warning: Invalid route format '${route_entry}', expected 'destination:gateway' =="
+        fi
+    done
+fi
