@@ -6,7 +6,8 @@ source "${SCRIPT_DIR}/../purenas.conf"
 
 if [ -n "${RUN_BEFORE:-}" ]; then
     echo "== Running pre-initialization commands =="
-    for cmd in ${RUN_BEFORE}; do
+    eval "cmds=(${RUN_BEFORE})"
+    for cmd in "${cmds[@]}"; do
         if [[ "${cmd}" =~ ^/ ]]; then
             script_path="${cmd}"
         else
