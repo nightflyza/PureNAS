@@ -54,7 +54,7 @@ Number of VLANs to generate automatically from the starting VLAN ID (`VLAN_FROM`
 
 ### `EXPLICT_VLANS`
 
-Explicit VLAN IDs to create and add to the bridge. Use this when you need specific VLANs that don't follow the sequential pattern. Leave empty if not needed.
+Explicit VLAN IDs to create and add to the bridge. Use this when you need specific VLANs that don't follow the sequential pattern. Multiple VLAN IDs can be specified. Leave empty if not needed.
 
 **Format**: Space-separated list of VLAN IDs
 
@@ -80,19 +80,19 @@ MAC address to assign to the bridge interface. Leave empty to use the system-gen
 
 ### `USER_NET`
 
-Network range for the user network in CIDR notation. This defines the IP address pool available for subscribers.
+Network range for the user network in CIDR notation. This defines the IP address pool available for subscribers. Multiple networks can be specified as a space-separated list, and all will be used for firewall rules. **Important**: When bandwidth shaping is enabled, only the first network in the list is used for shaper hash table initialization.
 
-**Format**: Network address in CIDR notation (IP/MASK)
+**Format**: Space-separated list of network addresses in CIDR notation (IP/MASK)
 
-**Example**: `USER_NET="172.16.0.0/17"` or `USER_NET="192.168.100.0/24"`
+**Example**: `USER_NET="172.16.0.0/17"` or `USER_NET="172.16.0.0/24 192.168.100.0/24"`
 
 ### `USER_GATEWAY_IP`
 
-Gateway IP address for the user network in CIDR notation. This IP will be used as the default gateway for subscribers.
+Gateway IP address for the user network in CIDR notation. This IP will be used as the default gateway for subscribers. Multiple gateway IPs can be specified and will all be assigned to the interface.
 
-**Format**: IP address with subnet mask (IP/MASK)
+**Format**: Space-separated list of IP addresses with subnet masks (IP/MASK)
 
-**Example**: `USER_GATEWAY_IP="172.16.0.1/17"` or `USER_GATEWAY_IP="192.168.100.1/24"`
+**Example**: `USER_GATEWAY_IP="172.16.0.1/17"` or `USER_GATEWAY_IP="172.16.0.1/24 172.16.1.1/24"`
 
 ### `FORCE_ASSIGN_GATEWAY_IP`
 
@@ -104,7 +104,7 @@ Force assignment of gateway IP addresses to user-connected interfaces. When enab
 
 ### `WAN_IP`
 
-Forced WAN interface IP configuration. Use this to manually configure IP addresses on the WAN interface. Leave empty to use existing interface configuration.
+Forced WAN interface IP configuration. Use this to manually configure IP addresses on the WAN interface. Multiple IP addresses can be assigned. Leave empty to use existing interface configuration.
 
 **Format**: Space-separated list of IP addresses with subnet masks (IP/MASK)
 
@@ -120,7 +120,7 @@ Forced IP address of the default route gateway. Use this to override the system'
 
 ### `SYSTEM_DNS_RESOLVERS`
 
-Override system DNS resolvers. These DNS servers will be used for system DNS resolution. Leave empty to not override system DNS settings.
+Override system DNS resolvers. Multiple DNS servers can be specified and will be added to `/etc/resolv.conf`. Leave empty to not override system DNS settings.
 
 **Format**: Space-separated list of IP addresses
 
@@ -128,7 +128,7 @@ Override system DNS resolvers. These DNS servers will be used for system DNS res
 
 ### `STATIC_ROUTES`
 
-Static routes configuration. Define custom routes for specific network destinations.
+Static routes configuration. Define custom routes for specific network destinations. Multiple routes can be specified.
 
 **Format**: Space-separated list of routes in format `destination:gateway`
 
@@ -138,7 +138,7 @@ Static routes configuration. Define custom routes for specific network destinati
 
 ### `PROTECTED_PORTS`
 
-Ports on this host that are protected from all incoming traffic except from safe zones. Only IPs/networks listed in `SAFE_ZONES` can access these ports.
+Ports on this host that are protected from all incoming traffic except from safe zones. Only IPs/networks listed in `SAFE_ZONES` can access these ports. Multiple ports can be specified.
 
 **Format**: Space-separated list of port numbers
 
@@ -146,7 +146,7 @@ Ports on this host that are protected from all incoming traffic except from safe
 
 ### `SAFE_ZONES`
 
-Network ranges or IP addresses that are allowed to access protected ports. These sources bypass the protection rules for ports listed in `PROTECTED_PORTS`.
+Network ranges or IP addresses that are allowed to access protected ports. These sources bypass the protection rules for ports listed in `PROTECTED_PORTS`. Multiple zones can be specified.
 
 **Format**: Space-separated list of IP addresses or CIDR networks
 
@@ -156,7 +156,7 @@ Network ranges or IP addresses that are allowed to access protected ports. These
 
 ### `ALLOWED_ALWAYS`
 
-IP addresses that subscribers are allowed to access without any restrictions at any time, regardless of their active status or other firewall rules.
+IP addresses that subscribers are allowed to access without any restrictions at any time, regardless of their active status or other firewall rules. Multiple IP addresses can be specified.
 
 **Format**: Space-separated list of IP addresses
 
@@ -164,7 +164,7 @@ IP addresses that subscribers are allowed to access without any restrictions at 
 
 ### `ALLOWED_ONLY_DNS`
 
-Only these DNS servers are allowed to be used for DNS resolution if set by any subscribers. All other DNS servers will be blocked.
+Only these DNS servers are allowed to be used for DNS resolution if set by any subscribers. All other DNS servers will be blocked. Multiple DNS servers can be specified.
 
 **Format**: Space-separated list of IP addresses
 
@@ -172,7 +172,7 @@ Only these DNS servers are allowed to be used for DNS resolution if set by any s
 
 ### `BANNED_HOSTS`
 
-IP addresses that are blocked without any exceptions. All traffic to/from these IPs will be dropped regardless of other rules.
+IP addresses that are blocked without any exceptions. All traffic to/from these IPs will be dropped regardless of other rules. Multiple IP addresses can be specified.
 
 **Format**: Space-separated list of IP addresses
 
@@ -182,7 +182,7 @@ IP addresses that are blocked without any exceptions. All traffic to/from these 
 
 ### `BLOCKED_INCOMING_PORTS`
 
-Ports for which all incoming traffic to the user network is denied. Subscribers cannot receive connections on these ports.
+Ports for which all incoming traffic to the user network is denied. Subscribers cannot receive connections on these ports. Multiple ports can be specified.
 
 **Format**: Space-separated list of port numbers
 
@@ -190,7 +190,7 @@ Ports for which all incoming traffic to the user network is denied. Subscribers 
 
 ### `BLOCKED_OUTGOING_PORTS`
 
-Ports for which all outgoing traffic from users to the internet is blocked. Subscribers cannot initiate connections to these ports.
+Ports for which all outgoing traffic from users to the internet is blocked. Subscribers cannot initiate connections to these ports. Multiple ports can be specified.
 
 **Format**: Space-separated list of port numbers
 
@@ -228,7 +228,7 @@ Enable NAT using pools of IP addresses instead of the WAN interface IP. Requires
 
 ### `POOL_NAT_NETS`
 
-Network pools to use for NAT when `POOL_NAT_ENABLED=YES`. Traffic will be distributed across these IP addresses.
+Network pools to use for NAT when `POOL_NAT_ENABLED=YES`. Traffic will be distributed across these IP addresses. Multiple network pools can be specified.
 
 **Format**: Space-separated list of networks in CIDR notation
 
@@ -326,7 +326,7 @@ Enable automatic rscriptd start at initialization. rscriptd is used for integrat
 
 ### `MODULES_LOAD`
 
-Kernel modules to load automatically during initialization. These modules are required for various PureNAS features like connection tracking, NAT, and protocol helpers.
+Kernel modules to load automatically during initialization. These modules are required for various PureNAS features like connection tracking, NAT, and protocol helpers. Multiple modules can be specified.
 
 **Format**: Space-separated list of kernel module names
 
@@ -448,7 +448,7 @@ nftables set name for inactive/disabled clients. This set contains IP addresses 
 
 ### `RUN_BEFORE`
 
-Commands or script paths to execute before PureNAS initialization. Use this to run custom setup scripts or commands that need to execute before the main initialization process.
+Commands or script paths to execute before PureNAS initialization. Use this to run custom setup scripts or commands that need to execute before the main initialization process. Multiple commands or scripts can be specified.
 
 **Format**: Space-separated list of commands or script paths. Commands with spaces should be enclosed in single quotes.
 
@@ -459,7 +459,7 @@ Commands or script paths to execute before PureNAS initialization. Use this to r
 
 ### `RUN_AFTER`
 
-Commands or script paths to execute after PureNAS initialization. Use this to run custom scripts or commands that need to execute after the main initialization process completes.
+Commands or script paths to execute after PureNAS initialization. Use this to run custom scripts or commands that need to execute after the main initialization process completes. Multiple commands or scripts can be specified.
 
 **Format**: Space-separated list of commands or script paths. Commands with spaces should be enclosed in single quotes.
 
