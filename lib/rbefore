@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ -n "${RUN_BEFORE:-}" ]; then
+    echo "== Running pre-initialization commands =="
+    for cmd in ${RUN_BEFORE}; do
+        if [[ "${cmd}" =~ ^/ ]]; then
+            script_path="${cmd}"
+        else
+            script_path="${SCRIPT_DIR}/../${cmd}"
+        fi
+        
+        if [ -f "${script_path}" ] && [ -x "${script_path}" ]; then
+            echo "== Executing script: ${script_path} =="
+            "${script_path}"
+        else
+            echo "== Executing command: ${cmd} =="
+            bash -c "${cmd}"
+        fi
+    done
+fi

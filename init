@@ -17,6 +17,7 @@ echo ''
 
 echo "== Initializing PureNAS =="
 
+"${SCRIPT_DIR}/lib/rbefore"
 "${SCRIPT_DIR}/lib/modload"
 "${SCRIPT_DIR}/lib/preconf"
 "${SCRIPT_DIR}/lib/interfaces"
@@ -32,6 +33,7 @@ echo "== Initializing PureNAS =="
 "${SCRIPT_DIR}/lib/rpscfg"
 "${SCRIPT_DIR}/lib/rsd"
 "${SCRIPT_DIR}/lib/snmd"
+"${SCRIPT_DIR}/lib/rafter"
 
 echo "== FINISHED =="
 
