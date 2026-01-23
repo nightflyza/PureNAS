@@ -318,7 +318,7 @@ SNMP community string for authentication. This acts as a password for SNMP acces
 
 ### `RSCRIPTD_ENABLED`
 
-Enable automatic rscriptd start at initialization. rscriptd is used for integration with Ubilling and other billing systems.
+Enable automatic rscriptd start at initialization. rscriptd is used for integration with Ubilling and Stargazer.
 
 **Format**: `YES` or `NO`
 

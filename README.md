@@ -30,7 +30,7 @@ Damn fast Linux-based IPoE NAS/BRAS/BNG implementation
 
 ```
 su -
-apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny sudo irqbalance
+apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny sudo irqbalance curl
 apt install -y git expat libexpat1-dev build-essential softflowd snmpd snmp
 apt install -y php8.4-cli php8.4-mysqli php8.4-mbstring php8.4-bcmath php8.4-curl
 apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev
@@ -42,7 +42,7 @@ apt install -y libvirt-dev libxml2-dev uuid-dev clang linux-cpupower elinks
 ### Ubuntu Server 25.10
 ```
 sudo bash
-apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny
+apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny curl
 apt install -y git expat libexpat1-dev build-essential softflowd snmpd snmp
 apt install -y php8.4-cli php8.4-mysqli php8.4-mbstring php8.4-bcmath php8.4-curl
 apt install -y autoconf libtool pkg-config libpcap-dev libnfnetlink-dev libbpf-dev libdbus-1-dev libvirt-dev libxml2-dev uuid-dev
