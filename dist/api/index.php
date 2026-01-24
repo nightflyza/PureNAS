@@ -8,6 +8,7 @@ $libFile = $scriptDir . '/../../lib/puritylib.php';
 require_once($libFile);
 $config = parseConfig($configFile);
 require_once($scriptDir . '/../../lib/api.ubrouting.php');
+require_once($scriptDir . '/../../lib/api.rest.php');
 
 $requiredOptions=array('REST_API_ENABLED', 'REST_API_KEY', 'REST_API_ALLOWED_IPS');
 
@@ -45,14 +46,6 @@ if (!empty($config['REST_API_KEY'])) {
 }
 
 //test callback: get all active subscribers
-function getAllActiveSubscribers() {
-    global $config;
-    $result=array();
-    $output = sudoRun('nft list set '.$config['NFT_FAMILY'].' '.$config['NFT_TABLE'].' '.$config['NFT_ACTIVE_SET'].' 2>/dev/null');
-    preg_match_all('/\b(\d+\.\d+\.\d+\.\d+)\b/', $output, $matches);
-    $result = array_unique($matches[1]);
-    return($result);
-}
 
 $allSubscribers = getAllActiveSubscribers();
 apiResponse($allSubscribers);

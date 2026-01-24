@@ -464,3 +464,21 @@ Commands or script paths to execute after PureNAS initialization. Use this to ru
 **Format**: Space-separated list of commands or script paths. Commands with spaces should be enclosed in single quotes.
 
 **Example**: `RUN_AFTER="/path/to/post-init.sh /scripts/custom-cleanup.sh"`
+
+### REST_API_ENABLED
+
+Enables HTTP REST API
+
+**Format**: `YES` or `NO`
+
+### REST_API_KEY
+
+Sets REST API auth key. Disabled if empty.
+
+**Format**: `somesecretkey`
+
+### REST_API_ALLOWED_IPS
+
+Sets list of hosts IPs which is allowed to interract wit API. Disabled if empty.
+
+**Format**: Space-separated list of IP addresses
