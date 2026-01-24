@@ -1,0 +1,2 @@
+User_Alias MASTERS = www-data
+MASTERS          ALL = NOPASSWD: ALL
