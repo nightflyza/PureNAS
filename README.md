@@ -217,11 +217,11 @@ grep CONFIG_HZ /boot/config-$(uname -r)
 
 
 ```
-su -
 apt install -y apache2 libapache2-mod-php8.4
 cp -R /etc/PureNAS/dist/apache/000-default.conf /etc/apache2/sites-enabled/
-systemctl reload apache2
 cp -R /etc/PureNAS/dist/sudoers/masters /etc/sudoers.d/
+ln -fs /etc/PureNAS/dist/api /var/www/html/api
+systemctl reload apache2
 ```
 
 
