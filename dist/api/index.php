@@ -28,13 +28,31 @@ if (!empty($config['REST_API_ALLOWED_IPS'])) {
     $allowedIps = array_map('trim', $allowedIps);
     $remoteIP=$_SERVER['REMOTE_ADDR'];
     if (!in_array($remoteIP, $allowedIps)) {
-        die('Error: Unauthorized access');
+        $response=array('error' => 'Unauthorized access');
+        apiResponse($response);
+        die();
     }
 }
 
+// API key validation if set
 if (!empty($config['REST_API_KEY'])) {
     $apiKey=ubRouting::get('key','safe');
     if ($apiKey !== $config['REST_API_KEY']) {
-        die('Error: Invalid API key');
+        $response=array('error' => 'Invalid API key');
+        apiResponse($response);
+        die();
     }
 }
+
+//test callback: get all active subscribers
+function getAllActiveSubscribers() {
+    global $config;
+    $result=array();
+    $output = sudoRun('nft list set '.$config['NFT_FAMILY'].' '.$config['NFT_TABLE'].' '.$config['NFT_ACTIVE_SET'].' 2>/dev/null');
+
+    return($result);
+}
+
+$allSubscribers = getAllActiveSubscribers();
+apiResponse($allSubscribers);
+die();
