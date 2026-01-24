@@ -49,10 +49,10 @@ function getAllActiveSubscribers() {
     global $config;
     $result=array();
     $output = sudoRun('nft list set '.$config['NFT_FAMILY'].' '.$config['NFT_TABLE'].' '.$config['NFT_ACTIVE_SET'].' 2>/dev/null');
-
+    preg_match_all('/\b(\d+\.\d+\.\d+\.\d+)\b/', $output, $matches);
+    $result = array_unique($matches[1]);
     return($result);
 }
 
 $allSubscribers = getAllActiveSubscribers();
 apiResponse($allSubscribers);
-die();
