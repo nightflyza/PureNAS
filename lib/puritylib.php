@@ -587,29 +587,4 @@ function renderSubscriberRow($ip, $state, $mac, $flag, $hash, $extensive, $class
 }
 
 
-/**
- * Renders API response.
- *
- * @param array $data
- *
- * @return void
- */
-function apiResponse($data=array()) {
-    header('Content-Type: application/json');
-    print(json_encode($data));
-}
-
-/**
- * Runs command with sudo if not running as root.
- *
- * @param string $command
- *
- * @return string
- */
-function sudoRun($command) {
-    if (posix_geteuid() !== 0) {
-        $command = 'sudo '.$command;
-    }
-    return(shell_exec($command));
-}
 
