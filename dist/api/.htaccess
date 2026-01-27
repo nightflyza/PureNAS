@@ -1,0 +1,18 @@
+RewriteEngine On
+RewriteBase /api/
+
+RewriteRule ^subscriber/getall$ index.php?subscriber=getall [L,QSA]
+RewriteRule ^subscriber/allow/([0-9\.]+)$ index.php?subscriber=allow&ip=$1 [L,QSA]
+RewriteRule ^subscriber/disallow/([0-9\.]+)$ index.php?subscriber=disallow&ip=$1 [L,QSA]
+RewriteRule ^subscriber/shape/([0-9\.]+)/([0-9]+)$ index.php?subscriber=shape&ip=$1&download=$2 [L,QSA]
+RewriteRule ^subscriber/shape/([0-9\.]+)/([0-9]+)/([0-9]+)$ index.php?subscriber=shape&ip=$1&download=$2&upload=$3 [L,QSA]
+RewriteRule ^subscriber/unshape/([0-9\.]+)$ index.php?subscriber=unshape&ip=$1 [L,QSA]
+RewriteRule ^arp/([0-9\.]+)/([0-9a-fA-F:]+)$ index.php?arp=$1&mac=$2 [L,QSA]
+RewriteRule ^unarp/([0-9\.]+)$ index.php?unarp=$1 [L,QSA]
+RewriteRule ^ip/ban/([0-9\.]+)$ index.php?ip=ban&addr=$1 [L,QSA]
+RewriteRule ^ip/unban/([0-9\.]+)$ index.php?ip=unban&addr=$1 [L,QSA]
+RewriteRule ^system/info$ index.php?system=info [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^.*$ index.php [L,QSA]
