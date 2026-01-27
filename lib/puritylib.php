@@ -623,11 +623,12 @@ function getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $fi
             
             if ($rate !== null and $rate !== 'N/A' and is_numeric($rate)) {
                 $formattedRate = formatRate($rate);
+                $displayRate = formatRateDisplay($formattedRate);
                 
                 if ($dev === $ifbIf) {
-                    $upRate = $formattedRate;
+                    $upRate = $displayRate;
                 } else {
-                    $downRate = $formattedRate;
+                    $downRate = $displayRate;
                 }
             }
         }
