@@ -335,6 +335,67 @@ function getAllSubscribersDetailed() {
     return ($result);
 }
 
+/**
+ * Executes action script and returns result.
+ *
+ * @param string $scriptPath
+ * @param array $args
+ *
+ * @return array
+ */
+function apiExecuteAction($scriptPath, $args = array()) {
+    $scriptDir = dirname(__FILE__);
+    $fullScriptPath = $scriptDir . '/../' . $scriptPath;
+    
+    if (!file_exists($fullScriptPath)) {
+        return (array('error' => 'Action script not found: ' . $scriptPath));
+    }
+    
+    if (!is_executable($fullScriptPath)) {
+        return (array('error' => 'Action script is not executable: ' . $scriptPath));
+    }
+    
+    $cmd = escapeshellarg($fullScriptPath);
+    foreach ($args as $arg) {
+        $cmd .= ' ' . escapeshellarg($arg);
+    }
+    
+    $output = sudoRun($cmd . ' 2>&1');
+    
+    // Check if command was successful (output contains success message or no error)
+    $success = true;
+    if (preg_match('/Error:/i', $output)) {
+        $success = false;
+    }
+    
+    return (array(
+        'success' => $success,
+        'output' => trim($output)
+    ));
+}
+
+/**
+ * Validates IP address format.
+ *
+ * @param string $ip
+ *
+ * @return bool
+ */
+function apiValidateIP($ip) {
+    return (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false);
+}
+
+/**
+ * Validates MAC address format.
+ *
+ * @param string $mac
+ *
+ * @return bool
+ */
+function apiValidateMAC($mac) {
+    return (preg_match('/^([0-9a-f]{2}(?::[0-9a-f]{2}){5})$/i', $mac) === 1);
+}
+
 
 /**
  * Gets subscriber data for REST API.
@@ -401,6 +462,54 @@ function getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $fi
         }
     }
     $result['hits'] = $hitsCount;
+    
+    return ($result);
+}
+
+/**
+ * Gets system information for REST API.
+ *
+ * @return array
+ */
+function apiGetSystemInfo() {
+    require_once('api.systemhwinfo.php');
+    $sysInfo = new SystemHwInfo();
+    
+    $result = array(
+        'os' => $sysInfo->getOs(),
+        'os_release' => $sysInfo->getOsRelease(),
+        'os_full_release' => $sysInfo->getOsFullRelease(),
+        'hostname' => $sysInfo->getHostname(),
+        'machine_arch' => $sysInfo->getMachineArch(),
+        'php_version' => $sysInfo->getPhpVersion(),
+        'cpu' => array(
+            'name' => $sysInfo->getCpuName(),
+            'cores' => (int)$sysInfo->getCpuCores()
+        ),
+        'memory' => array(
+            'total' => (int)$sysInfo->getMemTotal(),
+            'free' => (int)$sysInfo->getMemFree(),
+            'used' => (int)$sysInfo->getMemUsed(),
+            'used_percent' => round(($sysInfo->getMemUsed() / max(1, $sysInfo->getMemTotal())) * 100, 2),
+            'free_percent' => round(($sysInfo->getMemFree() / max(1, $sysInfo->getMemTotal())) * 100, 2)
+        ),
+        'uptime' => array(
+            'seconds' => (int)$sysInfo->getUptime(),
+            'days' => floor($sysInfo->getUptime() / 86400),
+            'hours' => floor(($sysInfo->getUptime() % 86400) / 3600),
+            'minutes' => floor(($sysInfo->getUptime() % 3600) / 60)
+        ),
+        'load' => array(
+            'la1' => $sysInfo->getLa1(),
+            'la5' => $sysInfo->getLa5(),
+            'la15' => $sysInfo->getLa15(),
+            'load_percent' => $sysInfo->getSystemLoadPercent(),
+            'load_percent1' => $sysInfo->getLoadPercent1(),
+            'load_percent5' => $sysInfo->getLoadPercent5(),
+            'load_percent15' => $sysInfo->getLoadPercent15(),
+            'load_avg_percent' => $sysInfo->getLoadAvgPercent()
+        )
+    );
     
     return ($result);
 }

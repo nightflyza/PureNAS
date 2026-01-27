@@ -10,6 +10,7 @@ $config = parseConfig($configFile);
 require_once($scriptDir . '/../../lib/api.ubrouting.php');
 require_once($scriptDir . '/../../lib/api.rest.php');
 
+
 $requiredOptions=array('REST_API_ENABLED', 'REST_API_KEY', 'REST_API_ALLOWED_IPS');
 
 foreach ($requiredOptions as $option) {
@@ -45,6 +46,176 @@ if (!empty($config['REST_API_KEY'])) {
     }
 }
 
-//get all subscribers with detailed information
-$allSubscribers = getAllSubscribersDetailed();
-apiResponse($allSubscribers);
+// Handle different API actions
+$action = ubRouting::get('subscriber', 'safe');
+$ipAction = ubRouting::get('ip', 'safe');
+$arpAction = ubRouting::get('arp', 'safe');
+$unarpAction = ubRouting::get('unarp', 'safe');
+$systemAction = ubRouting::get('system', 'safe');
+
+// Handle subscriber actions
+if ($action === 'getall') {
+    $allSubscribers = getAllSubscribersDetailed();
+    apiResponse($allSubscribers);
+    exit();
+}
+
+if ($action === 'allow') {
+    $ip = ubRouting::get('ip', 'safe');
+    if (empty($ip)) {
+        apiResponse(array('error' => 'IP address is required'));
+        exit();
+    }
+    if (!apiValidateIP($ip)) {
+        apiResponse(array('error' => 'Invalid IP address format'));
+        exit();
+    }
+    $result = apiExecuteAction('actions/subscriber_allow', array($ip));
+    apiResponse($result);
+    exit();
+}
+
+if ($action === 'disallow') {
+    $ip = ubRouting::get('ip', 'safe');
+    if (empty($ip)) {
+        apiResponse(array('error' => 'IP address is required'));
+        exit();
+    }
+    if (!apiValidateIP($ip)) {
+        apiResponse(array('error' => 'Invalid IP address format'));
+        exit();
+    }
+    $result = apiExecuteAction('actions/subscriber_disallow', array($ip));
+    apiResponse($result);
+    exit();
+}
+
+if ($action === 'shape') {
+    $ip = ubRouting::get('ip', 'safe');
+    $download = ubRouting::get('download', 'int');
+    $upload = ubRouting::get('upload', 'int');
+    
+    if (empty($ip)) {
+        apiResponse(array('error' => 'IP address is required'));
+        exit();
+    }
+    if (!apiValidateIP($ip)) {
+        apiResponse(array('error' => 'Invalid IP address format'));
+        exit();
+    }
+    if (empty($download) or $download <= 0) {
+        apiResponse(array('error' => 'Download speed in kbit/s is required and must be greater than 0'));
+        exit();
+    }
+    
+    $args = array($ip, $download);
+    if (!empty($upload) and $upload > 0) {
+        $args[] = $upload;
+    }
+    
+    $result = apiExecuteAction('actions/subscriber_shape', $args);
+    apiResponse($result);
+    exit();
+}
+
+if ($action === 'unshape') {
+    $ip = ubRouting::get('ip', 'safe');
+    if (empty($ip)) {
+        apiResponse(array('error' => 'IP address is required'));
+        exit();
+    }
+    if (!apiValidateIP($ip)) {
+        apiResponse(array('error' => 'Invalid IP address format'));
+        exit();
+    }
+    $result = apiExecuteAction('actions/subscriber_unshape', array($ip));
+    apiResponse($result);
+    exit();
+}
+
+// Handle ARP actions
+if (!empty($arpAction)) {
+    $ip = $arpAction;
+    $mac = ubRouting::get('mac', 'safe');
+    
+    if (empty($ip)) {
+        apiResponse(array('error' => 'IP address is required'));
+        exit();
+    }
+    if (!apiValidateIP($ip)) {
+        apiResponse(array('error' => 'Invalid IP address format'));
+        exit();
+    }
+    if (empty($mac)) {
+        apiResponse(array('error' => 'MAC address is required'));
+        exit();
+    }
+    if (!apiValidateMAC($mac)) {
+        apiResponse(array('error' => 'Invalid MAC address format'));
+        exit();
+    }
+    
+    $result = apiExecuteAction('actions/subscriber_arp', array($ip, $mac));
+    apiResponse($result);
+    exit();
+}
+
+if (!empty($unarpAction)) {
+    $ip = $unarpAction;
+    
+    if (empty($ip)) {
+        apiResponse(array('error' => 'IP address is required'));
+        exit();
+    }
+    if (!apiValidateIP($ip)) {
+        apiResponse(array('error' => 'Invalid IP address format'));
+        exit();
+    }
+    
+    $result = apiExecuteAction('actions/subscriber_unarp', array($ip));
+    apiResponse($result);
+    exit();
+}
+
+// Handle system info action
+if ($systemAction === 'info') {
+    $result = apiGetSystemInfo();
+    apiResponse($result);
+    exit();
+}
+
+// Handle IP ban/unban actions
+if ($ipAction === 'ban') {
+    $addr = ubRouting::get('addr', 'safe');
+    if (empty($addr)) {
+        apiResponse(array('error' => 'IP address is required'));
+        exit();
+    }
+    if (!apiValidateIP($addr)) {
+        apiResponse(array('error' => 'Invalid IP address format'));
+        exit();
+    }
+    $result = apiExecuteAction('actions/ip_ban', array($addr));
+    apiResponse($result);
+    exit();
+}
+
+if ($ipAction === 'unban') {
+    $addr = ubRouting::get('addr', 'safe');
+    if (empty($addr)) {
+        apiResponse(array('error' => 'IP address is required'));
+        exit();
+    }
+    if (!apiValidateIP($addr)) {
+        apiResponse(array('error' => 'Invalid IP address format'));
+        exit();
+    }
+    $result = apiExecuteAction('actions/ip_unban', array($addr));
+    apiResponse($result);
+    exit();
+}
+
+// Default: render error with notice of not specified action
+
+$apiResponse = array('error' => 'Not specified action');
+apiResponse($apiResponse);
