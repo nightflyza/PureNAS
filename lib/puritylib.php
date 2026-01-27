@@ -604,12 +604,13 @@ function getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $fi
         'ip' => $ip,
         'state' => $state,
         'mac' => isset($mac) ? $mac : null,
-        'rates' => 'unlimited / unlimited',
+        'ratedown' => 'unlimited',
+        'rateup' => 'unlimited',
         'hits' => null
     );
     
     if ($hash === null) {
-        return $result;
+        return ($result);
     }
     
     $downRate = 'unlimited';
@@ -622,6 +623,7 @@ function getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $fi
             
             if ($rate !== null and $rate !== 'N/A' and is_numeric($rate)) {
                 $formattedRate = formatRate($rate);
+                
                 if ($dev === $ifbIf) {
                     $upRate = $formattedRate;
                 } else {
@@ -631,11 +633,11 @@ function getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $fi
         }
     }
     
-    $rates = formatRates($downRate, $upRate);
-    $result['rates'] = $rates;
+    $result['ratedown'] = $downRate;
+    $result['rateup'] = $upRate;
     
     $hitsCount = null;
-    if ($rates !== 'unlimited / unlimited' and isset($filtersByIP[$ip])) {
+    if (($downRate !== 'unlimited' or $upRate !== 'unlimited') and isset($filtersByIP[$ip])) {
         foreach ($filtersByIP[$ip] as $filter) {
             $details = isset($filter['details']) ? $filter['details'] : '';
             if (preg_match('/success (\d+)/', $details, $matches)) {
@@ -649,7 +651,7 @@ function getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $fi
     }
     $result['hits'] = $hitsCount;
     
-    return $result;
+    return ($result);
 }
 
 

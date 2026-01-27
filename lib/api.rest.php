@@ -243,7 +243,7 @@ function getAllSubscribersDetailed() {
     
     foreach ($requiredOptions as $option) {
         if (!isset($config[$option])) {
-            return array('error' => $option.' not found in config');
+            return (array('error' => $option.' not found in config'));
         }
     }
     
@@ -329,8 +329,8 @@ function getAllSubscribersDetailed() {
         }
         
         $subscriberData = getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $filtersByIP);
-        $result[] = $subscriberData;
+        $result[$ip] = $subscriberData;
     }
     
-    return $result;
+    return ($result);
 }
