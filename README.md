@@ -6,7 +6,6 @@ Damn fast Linux-based IPoE NAS/BRAS/BNG implementation
 
 - DHCP helper
 - Detection of unknown/unauthorized subscribers
-- REST API
 - Radius Client
 - Walled garden
 
@@ -22,6 +21,7 @@ Damn fast Linux-based IPoE NAS/BRAS/BNG implementation
 - **sFlow sensor**
 - **SNMP server**
 - **rscriptd integration**
+- **HTTP REST API**
 
 
 ## Initial setup 
