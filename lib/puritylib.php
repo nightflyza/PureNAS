@@ -15,7 +15,9 @@ function parseConfig($file) {
         if (empty($line) or $line[0] === '#') {
             continue;
         }
-        if (preg_match('/^([A-Z_]+)="?([^"]+)"?$/', $line, $matches)) {
+        if (preg_match('/^([A-Z_]+)="([^"]*)"$/', $line, $matches)) {
+            $config[$matches[1]] = $matches[2];
+        } elseif (preg_match('/^([A-Z_]+)=([^"]*)$/', $line, $matches)) {
             $config[$matches[1]] = $matches[2];
         }
     }
