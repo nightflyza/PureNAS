@@ -215,16 +215,19 @@ grep CONFIG_HZ /boot/config-$(uname -r)
 
 ## REST API setup
 
+Optional [HTTP API](RESTAPI.md) may be installed following way:
 
 ```
 apt install -y apache2 libapache2-mod-php8.4
 cp -R /etc/PureNAS/dist/apache/000-default.conf /etc/apache2/sites-enabled/
 cp -R /etc/PureNAS/dist/sudoers/masters /etc/sudoers.d/
 ln -fs /etc/PureNAS/dist/api /var/www/html/api
+cp -R /etc/PureNAS/dist/webstub/* /var/www/html/
+a2enmod rewrite
 systemctl reload apache2
 ```
 
-
+And must be configured using specific `REST_API_*` options in `/etc/PureNAS/purenas.conf`
 
 ## PureNAS core update
 
@@ -294,6 +297,7 @@ it upgrades and removes everything except your purenas.conf main config file.
 
 ## Links 
 
-- See [CONFIGURATION.md](CONFIG.md) for detailed configuration options.
+- See [CONFIG.md](CONFIG.md) for detailed configuration options.
+- See [RESTAPI.md](RESTAPI.md) for detailed HTTP API description.
 - Integration with [Ubilling and rscriptd](https://wiki.ubilling.net.ua/doku.php?id=purenasrscriptd)
 - Based on [original UBRsciptdDebianNAS project](https://github.com/pautiina/UBRsciptdDebianNAS)
