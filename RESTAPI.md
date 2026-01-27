@@ -2,7 +2,7 @@
 
 ## Authentication
 
-If specified as non empty in config, all API requests requires an API key passed as query parameter: `?key=YOUR_API_KEY`
+If specified as non empty in config, all API requests requires an API key passed as query parameter: `?key=YOUR_API_KEY` at end. For example: `api/system/info?key=changeme`
 
 ## Base URL
 
@@ -76,9 +76,9 @@ GET /api/system/info
 
 All responses are JSON. Success responses contain data, error responses contain `error` field.
 
-## Example Response
+## Example Responses
 
-**Get all subscribers:**
+**subscriber/getall response:**
 ```json
 {
   "172.16.0.4": {
@@ -92,10 +92,10 @@ All responses are JSON. Success responses contain data, error responses contain 
 }
 ```
 
-**Action response:**
+**subscriber/allow Action response:**
 ```json
 {
   "success": true,
-  "output": "== Added 172.16.0.4 to NFT_ACTIVE_SET set =="
+  "output": "== Added 172.16.0.4 to allowed_clients set =="
 }
 ```
