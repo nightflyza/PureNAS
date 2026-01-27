@@ -45,7 +45,6 @@ if (!empty($config['REST_API_KEY'])) {
     }
 }
 
-//test callback: get all active subscribers
-
-$allSubscribers = getAllActiveSubscribers();
+//get all subscribers with detailed information
+$allSubscribers = getAllSubscribersDetailed();
 apiResponse($allSubscribers);
