@@ -334,3 +334,74 @@ function getAllSubscribersDetailed() {
     
     return ($result);
 }
+
+
+/**
+ * Gets subscriber data for REST API.
+ *
+ * @param string $ip
+ * @param string $state
+ * @param string|null $mac
+ * @param int|null $hash
+ * @param array $classesByHash
+ * @param string $ifbIf
+ * @param array $filtersByIP
+ *
+ * @return array
+ */
+function getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $filtersByIP) {
+    $result = array(
+        'ip' => $ip,
+        'state' => $state,
+        'mac' => isset($mac) ? $mac : null,
+        'ratedown' => 'unlimited',
+        'rateup' => 'unlimited',
+        'hits' => null
+    );
+    
+    if ($hash === null) {
+        return ($result);
+    }
+    
+    $downRate = 'unlimited';
+    $upRate = 'unlimited';
+    
+    if (isset($classesByHash[$hash])) {
+        foreach ($classesByHash[$hash] as $class) {
+            $dev = isset($class['dev']) ? $class['dev'] : '';
+            $rate = isset($class['rate']) ? $class['rate'] : null;
+            
+            if ($rate !== null and $rate !== 'N/A' and is_numeric($rate)) {
+                $formattedRate = formatRate($rate);
+                $displayRate = formatRateDisplay($formattedRate);
+                
+                if ($dev === $ifbIf) {
+                    $upRate = $displayRate;
+                } else {
+                    $downRate = $displayRate;
+                }
+            }
+        }
+    }
+    
+    $result['ratedown'] = $downRate;
+    $result['rateup'] = $upRate;
+    
+    $hitsCount = null;
+    if (($downRate !== 'unlimited' or $upRate !== 'unlimited') and isset($filtersByIP[$ip])) {
+        foreach ($filtersByIP[$ip] as $filter) {
+            $details = isset($filter['details']) ? $filter['details'] : '';
+            if (preg_match('/success (\d+)/', $details, $matches)) {
+                $hitsCount = (int)$matches[1];
+                break;
+            }
+        }
+        if ($hitsCount === null) {
+            $hitsCount = 0;
+        }
+    }
+    $result['hits'] = $hitsCount;
+    
+    return ($result);
+}
+
