@@ -288,6 +288,64 @@ it upgrades and removes everything except your purenas.conf main config file.
 [Hash bucket] ---> [HTB class] ---> [Rate / Ceil] ---> [qdisc]
 ```
 
+```
+1:0 (root)
+ │
+ ├─ pref 1  ht 800::
+ │      match 172.16.0.0/16, hashkey = 3rd octet
+ │      └──────────────► 999:   (256 buckets: 00..ff)
+ │                              │
+ │         for i=0..255:        ├─ 999:00  ── match 172.16.0.0/24   ──► 01: (256 buckets)
+ │         pref 2               ├─ 999:01  ── match 172.16.1.0/24   ──► 02:
+ │         ht 999:HEX:          ├─ ...
+ │         match 172.16.i.0/24  ├─ 999:0a  ── match 172.16.10.0/24  ──► 0b: (256 buckets)
+ │         hashkey = 4th octet  │              │
+ │         link TABLE_ID        │              └─ 0b:00 .. 0b:32 .. 0b:ff
+ │                              │                     │
+ │                              │                     └─ subscriber_shape: 172.16.10.50 → 0b:32:xxx
+ │                              └─ ...
+ │
+ └─ default (no match)  ──► 1:ffff
+```
+
+```
+                    ┌─────────────────────────────────────────────────────────────────┐
+                    │  ROOT: parent 1:0 (HTB root class)                              │
+                    └─────────────────────────────────────────────────────────────────┘
+                                                │
+                    pref 1  u32  ht 800::   match ip src/dst 172.16.0.0/16
+                                    │       hashkey mask 0x0000ff00 at 12/16 (3rd octet)
+                                    ▼
+                    ┌─────────────────────────────────────────────────────────────────┐
+                    │  LEVEL 1: handle 999:   divisor 256  →  256 buckets             │
+                    │  999:00  999:01  999:02  ...  999:0a  ...  999:ff               │
+                    │            bucket index = 3rd octet of IP (0–255)               │
+                    └─────────────────────────────────────────────────────────────────┘
+                        │       │              │
+                        │       │              └── 999:0a  ←  when 3rd octet = 10
+                        │       │
+          pref 2  for each i in 0..255:
+                    ht 999:HEX:  match ip src/dst 172.16.i.0/24
+                                 hashkey mask 0x000000ff at 12/16 (4th octet)
+                                 link → handle (i+1) in hex  e.g. 0b: for i=10
+                                    ▼
+                    ┌─────────────────────────────────────────────────────────────────┐
+                    │  LEVEL 2: handle 01:, 02:, ... 0b:, ... 100:   (256 tables)     │
+                    │  Each TABLE_ID has divisor 256  →  256 buckets                  │
+                    │  e.g. 0b:00  0b:01  ...  0b:32  ...  0b:ff                      │
+                    │              bucket index = 4th octet of IP (0–255)             │
+                    └─────────────────────────────────────────────────────────────────┘
+                                                        │
+                                    subscriber_shape adds per-IP filter here:
+                                    handle 0b:32:FILTER_ID  match ip src/dst 172.16.10.50/32
+                                                            flowid 1:CLASSID
+                                    ▼
+                    ┌─────────────────────────────────────────────────────────────────┐
+                    │  HTB class 1:CLASSID  (rate/ceil)  →  fq_codel                  │
+                    └─────────────────────────────────────────────────────────────────┘
+```
+
+
 ### IRQ affinity 
 
 ```
