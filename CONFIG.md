@@ -80,11 +80,11 @@ MAC address to assign to the bridge interface. Leave empty to use the system-gen
 
 ### `USER_NET`
 
-Network range for the user network in CIDR notation. This defines the IP address pool available for subscribers. Multiple networks can be specified as a space-separated list, and all will be used for firewall rules. **Important**: When bandwidth shaping is enabled, only the first network in the list is used for shaper hash table initialization.
+Network range for the user network in CIDR notation. This defines the IP address pool available for subscribers. Multiple networks can be specified as a space-separated list, and all will be used for firewall rules. **Important**: When bandwidth shaping is enabled, only the first network in the list is used for shaper hash table initialization as /16.
 
 **Format**: Space-separated list of network addresses in CIDR notation (IP/MASK)
 
-**Example**: `USER_NET="172.16.0.0/17"` or `USER_NET="172.16.0.0/24 192.168.100.0/24"`
+**Example**: `USER_NET="172.16.0.0/17"` or `USER_NET="172.16.0.0/24 172.16.14.0/24"`
 
 ### `USER_GATEWAY_IP`
 
