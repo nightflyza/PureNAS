@@ -130,4 +130,4 @@ tc filter add dev ${USER_GW_IF} parent 1: protocol ip prio 3 \
     match ip dst ${IP}/32 \
     flowid $CLASSID_HEX
 
-echo "== SHAPED: ${IP}  DOWN=${DOWN}kbit  UP=${UP}kbit  CLASSID=${CLASSID}/${CLASSID_HEX} =="
+echo "== SHAPED: ${IP}  DOWN=${DOWN}kbit  UP=${UP}kbit  CLASSID=${CLASSID}/${CLASSID_HEX} FHF=${FULL_HANDLE_FILTER} =="

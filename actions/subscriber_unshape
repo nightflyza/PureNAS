@@ -56,5 +56,5 @@ tc class delete dev ${IFB_IF} parent 1:0 classid $CLASSID_HEX 2>/dev/null || tru
 
 tc class delete dev ${USER_GW_IF} parent 1:0 classid $CLASSID_HEX 2>/dev/null || true
 
-echo "== UNSHAPED: ${IP}  CLASSID=${CLASSID}/${CLASSID_HEX} =="
+echo "== UNSHAPED: ${IP}  CLASSID=${CLASSID}/${CLASSID_HEX} FHF=${FULL_HANDLE_FILTER} =="
 
