@@ -80,7 +80,7 @@ MAC address to assign to the bridge interface. Leave empty to use the system-gen
 
 ### `USER_NET`
 
-Network range for the user network in CIDR notation. This defines the IP address pool available for subscribers. Multiple networks can be specified as a space-separated list, and all will be used for firewall rules. **Important**: When bandwidth shaping is enabled, only the first network in the list is used for shaper hash table initialization as /16.
+Network range for the user network in CIDR notation. This defines the IP address pool available for subscribers. Multiple networks can be specified as a space-separated list, and all will be used for firewall rules. **Important**: With `SHAPER_ENABLED`, only the first network is used for shaper hash table initialization (as /16). With `SPLIT_SHAPER_ENABLED`, all networks are supported for shaping.
 
 **Format**: Space-separated list of network addresses in CIDR notation (IP/MASK)
 
@@ -200,7 +200,13 @@ Ports for which all outgoing traffic from users to the internet is blocked. Subs
 
 ### `SHAPER_ENABLED`
 
-Enable or disable bandwidth limiting/shaping for subscribers. When enabled, traffic shaping rules can be applied to individual subscribers.
+Enable or disable bandwidth limiting/shaping for subscribers. When enabled, traffic shaping rules can be applied to individual subscribers. Mutually exclusive with `SPLIT_SHAPER_ENABLED`; when using split shaper, set this to `NO`.
+
+**Format**: `YES` or `NO`
+
+### `SPLIT_SHAPER_ENABLED`
+
+Enable the split (multi-network) shaper model. Supports multiple networks in `USER_NET` (e.g. `10.10.0.0/24 172.16.0.0/24 10.20.0.0/25`). Mutually exclusive with `SHAPER_ENABLED`; when using split shaper, set `SHAPER_ENABLED=NO`. Optional; if not set, defaults to `NO` and the original single-network shaper is used.
 
 **Format**: `YES` or `NO`
 

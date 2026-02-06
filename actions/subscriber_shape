@@ -20,6 +20,11 @@ if [ -z "$IP" ] || [ -z "$DOWN" ]; then
     exit 1
 fi
 
+if [ "${SHAPER_ENABLED:-NO}" != "YES" ] && [ "${SPLIT_SHAPER_ENABLED:-NO}" != "YES" ]; then
+    echo "No shaper enabled (SHAPER_ENABLED or SPLIT_SHAPER_ENABLED)"
+    exit 0
+fi
+
 UP_PROVIDED=""
 if [ -z "$UP" ]; then
     UP="$DOWN"
@@ -48,12 +53,25 @@ HASH_HEX=$(printf "%x" $IP_HASH)
 CLASSID="1:${IP_HASH}"
 CLASSID_HEX="1:0x${HASH_HEX}"
 
-IFS=. read -r _ _ O3 O4 <<< "$IP"
-TABLE_ID=$(printf "%02x" $((O3+1)))
-BUCKET_HEX=$(printf "%x" $O4)
-FILTER_ID=$(((IP_HASH + 1) & 4095))
-FILTER_ID_HEX=$(printf "%x" $FILTER_ID)
-FULL_HANDLE_FILTER="${TABLE_ID}:${BUCKET_HEX}:${FILTER_ID_HEX}"
+if [ "${SPLIT_SHAPER_ENABLED:-NO}" = "YES" ]; then
+    # Split shaper: flat structure, HANDLE_BASE from first 3 octets (O1.O2.O3), BUCKET from O4
+    IFS=. read -r O1 O2 O3 O4 <<< "$IP"
+    HANDLE_BASE=$(printf "%06x" $((O1*65536 + O2*256 + O3)))
+    BUCKET_HEX=$(printf "%x" $O4)
+    FILTER_ID=$(((IP_HASH + 1) & 4095))
+    FILTER_ID_HEX=$(printf "%x" $FILTER_ID)
+    FULL_HANDLE_FILTER="${HANDLE_BASE}:${BUCKET_HEX}:${FILTER_ID_HEX}"
+    HT_TABLE="${HANDLE_BASE}:${BUCKET_HEX}:"
+else
+    # Original shaper: 3-level structure, TABLE_ID from O3+1, BUCKET from O4
+    IFS=. read -r _ _ O3 O4 <<< "$IP"
+    TABLE_ID=$(printf "%02x" $((O3+1)))
+    BUCKET_HEX=$(printf "%x" $O4)
+    FILTER_ID=$(((IP_HASH + 1) & 4095))
+    FILTER_ID_HEX=$(printf "%x" $FILTER_ID)
+    FULL_HANDLE_FILTER="${TABLE_ID}:${BUCKET_HEX}:${FILTER_ID_HEX}"
+    HT_TABLE="${TABLE_ID}:${BUCKET_HEX}:"
+fi
 
 #dynamic burst calculation
 TIME_MS=50
@@ -101,14 +119,14 @@ tc qdisc add dev ${USER_GW_IF} parent $CLASSID_HEX handle ${HASH_HEX} fq_codel f
 tc filter del dev ${IFB_IF} parent 1: protocol ip prio 3 handle ${FULL_HANDLE_FILTER} u32 2>/dev/null || true
 tc filter add dev ${IFB_IF} parent 1: protocol ip prio 3 \
     handle ${FULL_HANDLE_FILTER} \
-    u32 ht ${TABLE_ID}:${BUCKET_HEX}: \
+    u32 ht ${HT_TABLE} \
     match ip src ${IP}/32 \
     flowid $CLASSID_HEX
 
 tc filter del dev ${USER_GW_IF} parent 1: protocol ip prio 3 handle ${FULL_HANDLE_FILTER} u32 2>/dev/null || true
 tc filter add dev ${USER_GW_IF} parent 1: protocol ip prio 3 \
     handle ${FULL_HANDLE_FILTER} \
-    u32 ht ${TABLE_ID}:${BUCKET_HEX}: \
+    u32 ht ${HT_TABLE} \
     match ip dst ${IP}/32 \
     flowid $CLASSID_HEX
 
