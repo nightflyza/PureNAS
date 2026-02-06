@@ -65,6 +65,7 @@ if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
         if [ -n "${USER_GATEWAY_IP:-}" ]; then
             for gateway_ip in ${USER_GATEWAY_IP}; do
                 if ! ip addr show dev "${BRIDGE_NAME}" | grep -q "${gateway_ip}"; then
+                    echo "== Assigned gateway IP ${gateway_ip} to ${BRIDGE_NAME} =="
                     ip addr add "${gateway_ip}" dev "${BRIDGE_NAME}" 2>/dev/null || true
                 fi
             done
@@ -76,8 +77,8 @@ else
         if [ -n "${USER_GATEWAY_IP:-}" ]; then
             for gateway_ip in ${USER_GATEWAY_IP}; do
                 if ! ip addr show dev "${LAN_IF}" | grep -q "${gateway_ip}"; then
-                    ip addr add "${gateway_ip}" dev "${LAN_IF}" 2>/dev/null || true
                     echo "== Assigned gateway IP ${gateway_ip} to ${LAN_IF} =="
+                    ip addr add "${gateway_ip}" dev "${LAN_IF}" 2>/dev/null || true
                 fi
             done
         fi
