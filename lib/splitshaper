@@ -83,7 +83,8 @@ if [ "${SPLIT_SHAPER_ENABLED}" = "YES" ]; then
         BASE=$(echo "${net}" | cut -d'/' -f1)
         PREFIX=$(echo "${net}" | cut -d'/' -f2)
         IFS=. read -r O1 O2 O3 O4 <<< "$BASE"
-        HANDLE_BASE=$(printf "%06x" $((O1*65536 + O2*256 + O3)))
+        # 16-bit handle (kernel limit); formula: (O1*256 + O2 + O3*37) % 65536
+        HANDLE_BASE=$(printf "%04x" $(((O1*256 + O2 + O3*37) % 65536)))
 
         # Per-subnet table: 256 buckets by 4th octet (create first)
         tc filter add dev ${IFB_IF} parent 1:0 handle ${HANDLE_BASE}: protocol ip pref 2 u32 divisor 256 2>/dev/null || true
