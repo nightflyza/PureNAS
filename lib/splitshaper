@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../purenas.conf"
 
 if [ "${SPLIT_SHAPER_ENABLED}" = "YES" ]; then
-    echo "== Configuring split shaper (multi-network) =="
+    echo "== Configuring split shaper =="
     # interface used as user gateway depend on VLAN_BRIDGE_ENABLED
     if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
         USER_GW_IF="${BRIDGE_NAME}"
@@ -83,8 +83,8 @@ if [ "${SPLIT_SHAPER_ENABLED}" = "YES" ]; then
         BASE=$(echo "${net}" | cut -d'/' -f1)
         PREFIX=$(echo "${net}" | cut -d'/' -f2)
         IFS=. read -r O1 O2 O3 O4 <<< "$BASE"
-        # 16-bit handle (kernel limit); formula: (O1*256 + O2 + O3*37) % 65536
-        HANDLE_BASE=$(printf "%04x" $(((O1*256 + O2 + O3*37) % 65536)))
+        # 12-bit handle (kernel u32 HTID limit < 0x1000); formula: (O1*256 + O2 + O3*37) % 4096
+        HANDLE_BASE=$(printf "%04x" $(((O1*256 + O2 + O3*37) % 4096)))
 
         # Per-subnet table: 256 buckets by 4th octet (create first)
         tc filter add dev ${IFB_IF} parent 1:0 handle ${HANDLE_BASE}: protocol ip pref 2 u32 divisor 256 2>/dev/null || true

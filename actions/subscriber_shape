@@ -56,7 +56,7 @@ CLASSID_HEX="1:0x${HASH_HEX}"
 if [ "${SPLIT_SHAPER_ENABLED:-NO}" = "YES" ]; then
     # Split shaper: flat structure, 16-bit HANDLE_BASE from (O1,O2,O3), BUCKET from O4
     IFS=. read -r O1 O2 O3 O4 <<< "$IP"
-    HANDLE_BASE=$(printf "%04x" $(((O1*256 + O2 + O3*37) % 65536)))
+    HANDLE_BASE=$(printf "%04x" $(((O1*256 + O2 + O3*37) % 4096)))
     BUCKET_HEX=$(printf "%x" $O4)
     FILTER_ID=$(((IP_HASH + 1) & 4095))
     FILTER_ID_HEX=$(printf "%x" $FILTER_ID)
