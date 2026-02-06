@@ -496,6 +496,27 @@ function generateSequentialIPs($networkInfo, $sampleSubscribersCount) {
 }
 
 /**
+ * Returns numeric hits for a subscriber from filter details (success count).
+ *
+ * @param string $ip
+ * @param array $filtersByIP
+ *
+ * @return int
+ */
+function getHitsForSubscriber($ip, $filtersByIP) {
+    if (!isset($filtersByIP[$ip])) {
+        return 0;
+    }
+    foreach ($filtersByIP[$ip] as $filter) {
+        $details = isset($filter['details']) ? $filter['details'] : '';
+        if (preg_match('/success (\d+)/', $details, $matches)) {
+            return (int)$matches[1];
+        }
+    }
+    return 0;
+}
+
+/**
  * Renders subscriber table row.
  *
  * @param string $ip

@@ -64,8 +64,14 @@ if (isset($argv[1]) and $argv[1] === 'terse') {
 }
 
 $extensive = false;
-if (isset($argv[1]) and $argv[1] === 'extensive') {
-    $extensive = true;
+$orderTop = false;
+for ($i = 1; $i < $argc; $i++) {
+    if (isset($argv[$i]) and $argv[$i] === 'extensive') {
+        $extensive = true;
+    }
+    if (isset($argv[$i]) and $argv[$i] === 'top') {
+        $orderTop = true;
+    }
 }
 
 $activeIPs = getActiveSubscribers($nftFamily, $nftTable, $nftSet);
@@ -122,7 +128,18 @@ foreach ($inactiveIPs as $ip) {
 }
 
 $allIPs = array_unique(array_merge($activeIPs, $inactiveIPs));
-sort($allIPs);
+if ($orderTop) {
+    usort($allIPs, function ($a, $b) use ($filtersByIP) {
+        $hitsA = getHitsForSubscriber($a, $filtersByIP);
+        $hitsB = getHitsForSubscriber($b, $filtersByIP);
+        if ($hitsB !== $hitsA) {
+            return $hitsB - $hitsA;
+        }
+        return strcmp($a, $b);
+    });
+} else {
+    sort($allIPs);
+}
 
 $arpEntries = getAllArpEntries();
 
