@@ -89,7 +89,7 @@ git clone https://github.com/nightflyza/PureNAS.git /etc/PureNAS
    /etc/PureNAS/actions/subscriber_unarp <IP_ADDRESS>
 
    # View all active subscribers
-   /etc/PureNAS/actions/subscribers_show [summary|terse|extensive]
+   /etc/PureNAS/actions/subscribers_show [summary|terse|extensive|top]
 
    # Check some subscriber access info
    /etc/PureNAS/actions/uc [IP_ADDRESS]
