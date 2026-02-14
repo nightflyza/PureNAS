@@ -188,5 +188,7 @@ if [ "${FW_MACFIX:-NO}" = "YES" ]; then
         nft flush set ${NFT_FAMILY} ${NFT_TABLE} fixed_ips 2>/dev/null || true
         nft insert rule ${NFT_FAMILY} ${NFT_TABLE} input iifname "${USER_GW_IF}" ip saddr @fixed_ips drop 2>/dev/null || true
         nft insert rule ${NFT_FAMILY} ${NFT_TABLE} input iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
+        nft insert rule ${NFT_FAMILY} ${NFT_TABLE} forward iifname "${USER_GW_IF}" ip saddr @fixed_ips drop 2>/dev/null || true
+        nft insert rule ${NFT_FAMILY} ${NFT_TABLE} forward iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
     fi
 fi
