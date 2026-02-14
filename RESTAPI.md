@@ -41,16 +41,16 @@ Parameters: IP, download (kbit/s), upload (kbit/s, optional)
 GET /api/subscriber/unshape/172.16.0.4
 ```
 
-### ARP Management
+### IP+MAC binding
 
-**Add static ARP entry**
+**Add IP+MAC binding** (static ARP and/or FW_BRIDGE_MACFIX)
 ```
-GET /api/arp/172.16.0.4/aa:bb:cc:dd:ee:ff
+GET /api/mac/172.16.0.4/aa:bb:cc:dd:ee:ff
 ```
 
-**Remove static ARP entry**
+**Remove IP+MAC binding**
 ```
-GET /api/unarp/172.16.0.4
+GET /api/unmac/172.16.0.4
 ```
 
 ### IP Ban Management

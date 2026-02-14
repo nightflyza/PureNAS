@@ -1,31 +1,4 @@
 #!/usr/bin/env bash
-set -e
-
+# Legacy wrapper: use subscriber_mac for IP+MAC binding (ARP and/or FW_BRIDGE_MACFIX).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../purenas.conf"
-
-IP="$1"
-MAC="$2"
-arpcmd="/usr/sbin/arp"
-
-if [ -z "$IP" ] || [ -z "$MAC" ]; then
-    echo "Usage: $0 <IP_ADDRESS> <MAC_ADDRESS>"
-    exit 1
-fi
-
-if [ "${FW_BRIDGE_MACFIX:-NO}" = "YES" ]; then
-    MAC_LOWER="$(echo "$MAC" | tr 'A-F' 'a-f')"
-    nft add element bridge subscribers fixed_clients { "${IP}" . "${MAC_LOWER}" } 2>/dev/null || {
-        echo "Error: Failed to add ${IP} . ${MAC_LOWER} to bridge fixed_clients" >&2
-        exit 1
-    }
-    nft add element bridge subscribers fixed_ips { "${IP}" } 2>/dev/null || true
-    echo "== Added IP+MAC static entry: ${IP} . ${MAC_LOWER} =="
-fi
-
-if [ "${DISABLE_ARPFIX:-NO}" = "YES" ]; then
-    echo "== DISABLE_ARPFIX is set, skipping static ARP for ${IP} =="
-else
-    ${arpcmd} -s ${IP} ${MAC}
-    echo "== Added static ARP entry for ${IP} with MAC ${MAC} =="
-fi
+exec "${SCRIPT_DIR}/subscriber_mac" "$@"

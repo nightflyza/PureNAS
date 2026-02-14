@@ -424,7 +424,7 @@ Override zero speed with this value (in kbit/s). This value is used when a subsc
 
 ### `DISABLE_ARPFIX`
 
-Disable use of static ARP (`arp -s` / `arp -d`) for subscriber IP–MAC binding. When set to `YES`, `subscriber_arp` and `subscriber_unarp` do not run `arp -s` / `arp -d`.
+Disable use of static ARP (`arp -s` / `arp -d`) for subscriber IP-MAC binding. When set to `YES`, `subscriber_mac` (and legacy `subscriber_arp`) do not run `arp -s` / `arp -d`.
 
 **Format**: `YES` or `NO` (default: `NO`)
 
@@ -432,7 +432,7 @@ Disable use of static ARP (`arp -s` / `arp -d`) for subscriber IP–MAC binding.
 
 ### `FW_BRIDGE_MACFIX`
 
-When set to `YES`, enables IP+MAC enforcement via nftables on the user gateway interface. Traffic from hosts without a binding is accepted by default. For IPs that have a binding in `fixed_clients`, traffic is accepted only when the source MAC matches the fixed one; otherwise it is dropped. `subscriber_arp` adds (IP, MAC) to `fixed_clients` and the IP to `fixed_ips`; `subscriber_unarp` removes them.
+When set to `YES`, enables IP+MAC enforcement via nftables on the user gateway interface. Traffic from hosts without a binding is accepted by default. For IPs that have a binding in `fixed_clients`, traffic is accepted only when the source MAC matches the fixed one; otherwise it is dropped. `subscriber_mac` adds (IP, MAC) to `fixed_clients` and the IP to `fixed_ips`; `subscriber_unmac` removes them.
 
 **Format**: `YES` or `NO` (default: `NO`)
 

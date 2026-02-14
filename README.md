@@ -83,10 +83,10 @@ git clone https://github.com/nightflyza/PureNAS.git /etc/PureNAS
    /etc/PureNAS/actions/subscriber_unshape <IP_ADDRESS>
 
    # Create permanent IP-MAC record for subscriber
-   /etc/PureNAS/actions/subscriber_arp <IP_ADDRESS> <MAC_ADDRESS>
+   /etc/PureNAS/actions/subscriber_mac <IP_ADDRESS> <MAC_ADDRESS>
 
    # Remove permanent IP-MAC record for subscriber
-   /etc/PureNAS/actions/subscriber_unarp <IP_ADDRESS>
+   /etc/PureNAS/actions/subscriber_unmac <IP_ADDRESS>
 
    # View all active subscribers
    /etc/PureNAS/actions/subscribers_show [summary|terse|extensive|top]
@@ -252,8 +252,10 @@ it upgrades and removes everything except your purenas.conf main config file.
     ├── subscriber_disallow   # disallow subscriber access to internet
     ├── subscriber_shape      # Apply bandwidth limits to subscriber
     ├── subscriber_unshape    # Remove bandwidth limits from subscriber
-    ├── subscriber_arp        # Make subscriber IP-MAC permanent record
-    ├── subscriber_unarp      # Remove subscriber IP-MAC permanent record
+    ├── subscriber_mac        # Add subscriber IP+MAC binding (ARP and/or FW_BRIDGE_MACFIX)
+    ├── subscriber_unmac      # Remove subscriber IP+MAC binding
+    ├── subscriber_arp        # Legacy: calls subscriber_mac
+    ├── subscriber_unarp      # Legacy: calls subscriber_unmac
     ├── subscribers_show      # List all active subscribers
     ├── ip_ban                # Set an IP address to block list
     ├── ip_unban              # Remove an IP address from block list
