@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+
+if [ -z "${SPOOF_ANY_DNS:-}" ]; then
+    exit 0
+fi
+
+SPOOF_TARGET="${SPOOF_ANY_DNS%% *}"
+
+echo "== Configuring DNS redirect (prerouting -> ${SPOOF_TARGET}) =="
+
+if nft list chain ${NFT_FAMILY} ${NFT_TABLE} prerouting >/dev/null 2>&1; then
+    nft flush chain ${NFT_FAMILY} ${NFT_TABLE} prerouting 2>/dev/null || true
+else
+    nft add chain ${NFT_FAMILY} ${NFT_TABLE} prerouting '{ type nat hook prerouting priority dstnat; policy accept; }'
+fi
+
+if [ -n "${ALLOWED_ONLY_DNS:-}" ]; then
+    # Redirect DNS from users only when destination is not in allowed_dns
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} prerouting ip saddr @users_networks udp dport 53 ip daddr != @allowed_dns dnat to ${SPOOF_TARGET}:53 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} prerouting ip saddr @users_networks tcp dport 53 ip daddr != @allowed_dns dnat to ${SPOOF_TARGET}:53 2>/dev/null || true
+else
+    # Redirect all DNS from users to SPOOF_ANY_DNS
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} prerouting ip saddr @users_networks udp dport 53 dnat to ${SPOOF_TARGET}:53 2>/dev/null || true
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} prerouting ip saddr @users_networks tcp dport 53 dnat to ${SPOOF_TARGET}:53 2>/dev/null || true
+fi

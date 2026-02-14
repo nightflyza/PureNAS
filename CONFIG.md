@@ -170,6 +170,19 @@ Only these DNS servers are allowed to be used for DNS resolution if set by any s
 
 **Example**: `ALLOWED_ONLY_DNS="8.8.8.8 1.1.1.1"` or `ALLOWED_ONLY_DNS="8.8.8.8 8.8.4.4 1.1.1.1"`
 
+### `SPOOF_ANY_DNS`
+
+Redirect DNS traffic from user networks to this IP. Applied by `lib/dnsrepl` via prerouting DNAT. If set, only the first IP is used when multiple are given.
+
+- **When `ALLOWED_ONLY_DNS` is set:** Only requests whose destination is *not* in `ALLOWED_ONLY_DNS` are redirected to `SPOOF_ANY_DNS`. Typically set `SPOOF_ANY_DNS` to one of the allowed DNS IPs so all client DNS is forced through it.
+- **When `ALLOWED_ONLY_DNS` is empty:** All DNS traffic from user networks (UDP/TCP port 53) is redirected to this IP.
+
+Leave empty to disable DNS redirect.
+
+**Format**: IP address or space-separated list (first IP used)
+
+**Example**: `SPOOF_ANY_DNS="8.8.8.8"` or `SPOOF_ANY_DNS=""`
+
 ### `BANNED_HOSTS`
 
 IP addresses or CIDR prefixes that are blocked without any exceptions. All traffic to/from these will be dropped regardless of other rules. Multiple entries can be specified.
