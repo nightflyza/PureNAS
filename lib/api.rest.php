@@ -189,6 +189,21 @@ function apiGetAllTcFilters($dev1, $dev2) {
 }
 
 /**
+ * Returns IPs that have a static IP+MAC binding (bridge fixed_ips set) for REST API.
+ * Uses sudo when not root. Empty when FW_BRIDGE_MACFIX is off or nft set is missing.
+ *
+ * @return array
+ */
+function apiGetFixedBindingIPs() {
+    $output = sudoRun('nft list set bridge subscribers fixed_ips 2>/dev/null');
+    $ips = array();
+    if (!empty($output) && preg_match_all('/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/', $output, $matches)) {
+        $ips = array_unique($matches[1]);
+    }
+    return $ips;
+}
+
+/**
  * Gets all ARP entries for REST API.
  *
  * @return array
@@ -317,6 +332,7 @@ function getAllSubscribersDetailed() {
     sort($allIPs);
     
     $arpEntries = apiGetAllArpEntries();
+    $fixedBindingIPs = apiGetFixedBindingIPs();
     
     $result = array();
     foreach ($allIPs as $ip) {
@@ -324,11 +340,17 @@ function getAllSubscribersDetailed() {
         $state = isset($ipToState[$ip]) ? $ipToState[$ip] : 'UNKNOWN';
         
         $mac = null;
+        $flag = '';
         if (isset($arpEntries[$ip])) {
             $mac = $arpEntries[$ip]['mac'];
+            $flag = isset($arpEntries[$ip]['flag']) ? $arpEntries[$ip]['flag'] : '';
+        }
+        if (in_array($ip, $fixedBindingIPs)) {
+            $flag .= 'S';
         }
         
         $subscriberData = getSubscriberData($ip, $state, $mac, $hash, $classesByHash, $ifbIf, $filtersByIP);
+        $subscriberData['flag'] = $flag;
         $result[$ip] = $subscriberData;
     }
     

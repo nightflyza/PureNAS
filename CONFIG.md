@@ -430,6 +430,14 @@ Disable use of static ARP (`arp -s` / `arp -d`) for subscriber IP–MAC binding.
 
 **Example**: `DISABLE_ARPFIX="YES"`
 
+### `FW_BRIDGE_MACFIX`
+
+When set to `YES`, enables IP+MAC enforcement via nftables on the user gateway interface. Traffic from hosts without a binding is accepted by default. For IPs that have a binding in `fixed_clients`, traffic is accepted only when the source MAC matches the fixed one; otherwise it is dropped. `subscriber_arp` adds (IP, MAC) to `fixed_clients` and the IP to `fixed_ips`; `subscriber_unarp` removes them.
+
+**Format**: `YES` or `NO` (default: `NO`)
+
+**Example**: `FW_BRIDGE_MACFIX="YES"`
+
 ## nftables Configuration
 
 These parameters are used for nftables configuration. **You should not modify these** unless you understand the implications and need to customize the firewall table structure.

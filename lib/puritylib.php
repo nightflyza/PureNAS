@@ -350,6 +350,22 @@ function getAllArpEntries() {
 }
 
 /**
+ * Returns IPs that have a static IP+MAC binding (bridge fixed_ips set).
+ * Empty when FW_BRIDGE_MACFIX is off or nft set is missing.
+ *
+ * @return array
+ */
+function getFixedBindingIPs() {
+    $cmd = 'nft list set bridge subscribers fixed_ips 2>/dev/null';
+    $output = shell_exec($cmd);
+    $ips = array();
+    if (!empty($output) && preg_match_all('/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/', $output, $matches)) {
+        $ips = array_unique($matches[1]);
+    }
+    return $ips;
+}
+
+/**
  * Formats ARP flag for display.
  *
  * @param string $flag

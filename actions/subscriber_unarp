@@ -13,6 +13,19 @@ if [ -z "$IP" ]; then
     exit 1
 fi
 
+if [ "${FW_BRIDGE_MACFIX:-NO}" = "YES" ]; then
+    elem="$(nft list set bridge subscribers fixed_clients 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3} \. [0-9a-f:]+' | while read -r e; do if [[ "$e" =~ ^${IP}\ \.\  ]]; then echo "$e"; break; fi; done)"
+    if [ -n "$elem" ]; then
+        ip_part="${elem%% . *}"
+        mac_part="${elem#* . }"
+        ip_part="${ip_part% }"
+        mac_part="${mac_part# }"
+        nft delete element bridge subscribers fixed_clients { "${ip_part}" . "${mac_part}" } 2>/dev/null || true
+        nft delete element bridge subscribers fixed_ips { "${ip_part}" } 2>/dev/null || true
+        echo "== Removed IP+MAC static entry: ${ip_part} . ${mac_part} =="
+    fi
+fi
+
 if [ "${DISABLE_ARPFIX:-NO}" = "YES" ]; then
     echo "== DISABLE_ARPFIX is set, skipping static ARP remove for ${IP} =="
 else

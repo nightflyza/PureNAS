@@ -142,6 +142,7 @@ if ($orderTop) {
 }
 
 $arpEntries = getAllArpEntries();
+$fixedBindingIPs = getFixedBindingIPs();
 
 renderHeader($extensive);
 
@@ -154,6 +155,9 @@ foreach ($allIPs as $ip) {
     if (isset($arpEntries[$ip])) {
         $mac = $arpEntries[$ip]['mac'];
         $flag = $arpEntries[$ip]['flag'];
+    }
+    if (in_array($ip, $fixedBindingIPs)) {
+        $flag = (string)$flag . 'S';
     }
     
     renderSubscriberRow($ip, $state, $mac, $flag, $hash, $extensive, $classesByHash, $ifbIf, $filtersByIP);
