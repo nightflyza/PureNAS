@@ -171,7 +171,8 @@ foreach ($allIPs as $ip) {
         $mac = $arpEntries[$ip]['mac'];
         $flag = $arpEntries[$ip]['flag'];
     }
-    if (in_array($ip, $fixedBindingIPs)) {
+    $hasFixedBinding = in_array($ip, $fixedBindingIPs);
+    if ($hasFixedBinding) {
         $flag = (string)$flag . 'S';
         if (!empty($mac) && isset($fixedBindingMap[$ip]) && strtolower($mac) !== $fixedBindingMap[$ip]) {
             $flag = (string)$flag . 'X';
