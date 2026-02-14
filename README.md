@@ -5,9 +5,11 @@ Damn fast Linux-based IPoE NAS/BRAS/BNG implementation
 ## Roadmap
 
 - DHCP helper
+- DNS spoofing?
 - Detection of unknown/unauthorized subscribers
 - Radius Client
 - Walled garden
+
 
 ## Features
 
