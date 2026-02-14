@@ -11,7 +11,7 @@ fi
 
 SPOOF_TARGET="${SPOOF_ANY_DNS%% *}"
 
-echo "== Configuring DNS redirect (prerouting -> ${SPOOF_TARGET}) =="
+echo "== Configuring DNS redirect =="
 
 if nft list chain ${NFT_FAMILY} ${NFT_TABLE} prerouting >/dev/null 2>&1; then
     nft flush chain ${NFT_FAMILY} ${NFT_TABLE} prerouting 2>/dev/null || true
