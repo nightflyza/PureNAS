@@ -422,6 +422,14 @@ Override zero speed with this value (in kbit/s). This value is used when a subsc
 
 **Example**: `ZERO_SPEED_OVERRIDE="1310720"` (1280 Mbit/s) or `ZERO_SPEED_OVERRIDE="1024000"` (1000 Mbit/s)
 
+### `DISABLE_ARPFIX`
+
+Disable use of static ARP (`arp -s` / `arp -d`) for subscriber IP–MAC binding. When set to `YES`, `subscriber_arp` and `subscriber_unarp` do not run `arp -s` / `arp -d`.
+
+**Format**: `YES` or `NO` (default: `NO`)
+
+**Example**: `DISABLE_ARPFIX="YES"`
+
 ## nftables Configuration
 
 These parameters are used for nftables configuration. **You should not modify these** unless you understand the implications and need to customize the firewall table structure.

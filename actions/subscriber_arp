@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
 IP="$1"
 MAC="$2"
 arpcmd="/usr/sbin/arp"
@@ -10,6 +13,9 @@ if [ -z "$IP" ] || [ -z "$MAC" ]; then
     exit 1
 fi
 
-${arpcmd} -s ${IP} ${MAC}
-
-echo "== Added static ARP entry for ${IP} with MAC ${MAC} =="
+if [ "${DISABLE_ARPFIX:-NO}" = "YES" ]; then
+    echo "== DISABLE_ARPFIX is set, skipping static ARP for ${IP} =="
+else
+    ${arpcmd} -s ${IP} ${MAC}
+    echo "== Added static ARP entry for ${IP} with MAC ${MAC} =="
+fi
