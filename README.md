@@ -89,7 +89,7 @@ git clone https://github.com/nightflyza/PureNAS.git /etc/PureNAS
    /etc/PureNAS/actions/subscriber_unmac <IP_ADDRESS>
 
    # View all active subscribers
-   /etc/PureNAS/actions/subscribers_show [summary|terse|extensive|top]
+   /etc/PureNAS/actions/subscribers_show [summary|terse|extensive|top|help]
 
    # Check some subscriber access info
    /etc/PureNAS/actions/uc [IP_ADDRESS]
@@ -252,7 +252,7 @@ it upgrades and removes everything except your purenas.conf main config file.
     ├── subscriber_disallow   # disallow subscriber access to internet
     ├── subscriber_shape      # Apply bandwidth limits to subscriber
     ├── subscriber_unshape    # Remove bandwidth limits from subscriber
-    ├── subscriber_mac        # Add subscriber IP+MAC binding (ARP and/or FW_BRIDGE_MACFIX)
+    ├── subscriber_mac        # Add subscriber IP+MAC binding (ARP and/or FW_MACFIX)
     ├── subscriber_unmac      # Remove subscriber IP+MAC binding
     ├── subscriber_arp        # Legacy: calls subscriber_mac
     ├── subscriber_unarp      # Legacy: calls subscriber_unmac

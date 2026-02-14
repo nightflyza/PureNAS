@@ -43,7 +43,7 @@ GET /api/subscriber/unshape/172.16.0.4
 
 ### IP+MAC binding
 
-**Add IP+MAC binding** (static ARP and/or FW_BRIDGE_MACFIX)
+**Add IP+MAC binding** (static ARP and/or FW_MACFIX)
 ```
 GET /api/mac/172.16.0.4/aa:bb:cc:dd:ee:ff
 ```

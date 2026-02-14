@@ -430,13 +430,13 @@ Disable use of static ARP (`arp -s` / `arp -d`) for subscriber IP-MAC binding. W
 
 **Example**: `DISABLE_ARPFIX="YES"`
 
-### `FW_BRIDGE_MACFIX`
+### `FW_MACFIX`
 
-When set to `YES`, enables IP+MAC enforcement via nftables on the user gateway interface. With a bridge (`VLAN_BRIDGE_ENABLED=YES`) uses table `bridge subscribers` (forward + input); with a physical interface uses table `netdev subscribers` (ingress). Traffic from hosts without a binding is accepted by default. For IPs that have a binding in `fixed_clients`, traffic is accepted only when the source MAC matches the fixed one; otherwise it is dropped. `subscriber_mac` adds (IP, MAC) to `fixed_clients` and the IP to `fixed_ips`; `subscriber_unmac` removes them.
+When set to `YES`, enables IP+MAC enforcement via nftables on the user gateway interface. Uses table `inet`/`NFT_TABLE`: sets `fixed_clients`, `fixed_ips` and rules in the input chain (same for bridge and physical interface). Traffic from hosts without a binding is accepted by default. For IPs that have a binding in `fixed_clients`, traffic is accepted only when the source MAC matches the fixed one; otherwise it is dropped. `subscriber_mac` adds (IP, MAC) to `fixed_clients` and the IP to `fixed_ips`; `subscriber_unmac` removes them.
 
 **Format**: `YES` or `NO` (default: `NO`)
 
-**Example**: `FW_BRIDGE_MACFIX="YES"`
+**Example**: `FW_MACFIX="YES"`
 
 ## nftables Configuration
 

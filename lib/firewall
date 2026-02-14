@@ -172,35 +172,21 @@ fi
 
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @users_networks iifname "${WAN_IF}" ct state established,related accept 2>/dev/null || true
 
-if [ "${FW_BRIDGE_MACFIX:-NO}" = "YES" ]; then
+if [ "${FW_MACFIX:-NO}" = "YES" ]; then
     if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
         USER_GW_IF="${BRIDGE_NAME}"
     else
         USER_GW_IF="${LAN_IF}"
     fi
     if [ -n "${USER_GW_IF:-}" ]; then
-        if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
-            echo "== Configuring bridge IP+MAC filtering (${USER_GW_IF}) =="
-            nft delete table bridge subscribers 2>/dev/null || true
-            nft add table bridge subscribers
-            nft add set bridge subscribers fixed_clients '{ type ipv4_addr . ether_addr; size 65535; }'
-            nft add set bridge subscribers fixed_ips '{ type ipv4_addr; size 65535; }'
-            nft flush set bridge subscribers fixed_clients 2>/dev/null || true
-            nft flush set bridge subscribers fixed_ips 2>/dev/null || true
-            nft add chain bridge subscribers forward '{ type filter hook forward priority 0; policy accept; }'
-            nft add rule bridge subscribers forward iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
-            nft add rule bridge subscribers forward iifname "${USER_GW_IF}" ip saddr @fixed_ips drop 2>/dev/null || true
-        else
-            echo "== Configuring netdevice IP+MAC filtering (${USER_GW_IF}) =="
-            nft delete table netdev subscribers 2>/dev/null || true
-            nft add table netdev subscribers
-            nft add set netdev subscribers fixed_clients '{ type ipv4_addr . ether_addr; size 65535; }'
-            nft add set netdev subscribers fixed_ips '{ type ipv4_addr; size 65535; }'
-            nft flush set netdev subscribers fixed_clients 2>/dev/null || true
-            nft flush set netdev subscribers fixed_ips 2>/dev/null || true
-            nft add chain netdev subscribers ingress "{ type filter hook ingress device ${USER_GW_IF} priority 0; policy accept; }"
-            nft add rule netdev subscribers ingress ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
-            nft add rule netdev subscribers ingress ip saddr @fixed_ips drop 2>/dev/null || true
-        fi
+        echo "== Configuring IP+MAC filtering (${USER_GW_IF}) =="
+        nft list set ${NFT_FAMILY} ${NFT_TABLE} fixed_clients >/dev/null 2>&1 || \
+            nft add set ${NFT_FAMILY} ${NFT_TABLE} fixed_clients '{ type ipv4_addr . ether_addr; size 65535; }'
+        nft list set ${NFT_FAMILY} ${NFT_TABLE} fixed_ips >/dev/null 2>&1 || \
+            nft add set ${NFT_FAMILY} ${NFT_TABLE} fixed_ips '{ type ipv4_addr; size 65535; }'
+        nft flush set ${NFT_FAMILY} ${NFT_TABLE} fixed_clients 2>/dev/null || true
+        nft flush set ${NFT_FAMILY} ${NFT_TABLE} fixed_ips 2>/dev/null || true
+        nft insert rule ${NFT_FAMILY} ${NFT_TABLE} input iifname "${USER_GW_IF}" ip saddr @fixed_ips drop 2>/dev/null || true
+        nft insert rule ${NFT_FAMILY} ${NFT_TABLE} input iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
     fi
 fi
