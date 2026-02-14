@@ -189,5 +189,8 @@ if [ "${FW_BRIDGE_MACFIX:-NO}" = "YES" ]; then
         nft add chain bridge subscribers forward '{ type filter hook forward priority 0; policy accept; }'
         nft add rule bridge subscribers forward iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
         nft add rule bridge subscribers forward iifname "${USER_GW_IF}" ip saddr @fixed_ips drop 2>/dev/null || true
+        nft add chain bridge subscribers input '{ type filter hook input priority 0; policy accept; }'
+        nft add rule bridge subscribers input iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
+        nft add rule bridge subscribers input iifname "${USER_GW_IF}" ip saddr @fixed_ips drop 2>/dev/null || true
     fi
 fi
