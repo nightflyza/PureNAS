@@ -12,7 +12,7 @@ MAC=`/etc/rscriptd/GetMac $LOGIN`
 cur_date=`date \+\%Y.\%m.\%d`
 cur_time=`date \+\%H:\%M:\%S`
 
-/etc/PureNAS/actions/subscriber_arp $IP $MAC
+/etc/PureNAS/actions/subscriber_mac $IP $MAC
 /etc/PureNAS/actions/subscriber_allow $IP
 /etc/PureNAS/actions/subscriber_shape $IP $SPEED $UPSPEED
 
