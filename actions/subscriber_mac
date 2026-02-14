@@ -15,11 +15,16 @@ fi
 
 if [ "${FW_BRIDGE_MACFIX:-NO}" = "YES" ]; then
     MAC_LOWER="$(echo "$MAC" | tr 'A-F' 'a-f')"
-    nft add element bridge subscribers fixed_clients { "${IP}" . "${MAC_LOWER}" } 2>/dev/null || {
+    if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+        NFT_TABLE_SPEC="bridge subscribers"
+    else
+        NFT_TABLE_SPEC="netdev subscribers"
+    fi
+    nft add element ${NFT_TABLE_SPEC} fixed_clients { "${IP}" . "${MAC_LOWER}" } 2>/dev/null || {
         echo "Error: Failed to add ${IP} . ${MAC_LOWER} static entry" >&2
         exit 1
     }
-    nft add element bridge subscribers fixed_ips { "${IP}" } 2>/dev/null || true
+    nft add element ${NFT_TABLE_SPEC} fixed_ips { "${IP}" } 2>/dev/null || true
     echo "== Added IP+MAC static entry: ${IP} . ${MAC_LOWER} =="
 fi
 

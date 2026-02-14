@@ -12,6 +12,20 @@ if ($uid !== 0) {
     exit(1);
 }
 
+for ($i = 1; $i < $argc; $i++) {
+    if (isset($argv[$i]) && $argv[$i] === 'help') {
+        echo "Usage: " . basename($argv[0]) . " [options]\n";
+        echo "Options:\n";
+        echo "  summary    - show active/inactive counts only\n";
+        echo "  terse      - list active subscriber IPs, one per line\n";
+        echo "  extensive  - show full table (CLASSID, BUCKET, RATES, etc.)\n";
+        echo "  top        - order by traffic (hits) descending\n";
+        echo "  help       - this help\n";
+        echo "FLAG: P=permanent R=reachable I=incomplete D=delay S=static binding X=MAC mismatch with binding\n";
+        exit(0);
+    }
+}
+
 $scriptDir = dirname(__FILE__);
 $configFile = $scriptDir . '/../purenas.conf';
 $libFile = $scriptDir . '/../lib/puritylib.php';
@@ -143,6 +157,7 @@ if ($orderTop) {
 
 $arpEntries = getAllArpEntries();
 $fixedBindingIPs = getFixedBindingIPs();
+$fixedBindingMap = getFixedBindingMap();
 
 renderHeader($extensive);
 
@@ -158,6 +173,9 @@ foreach ($allIPs as $ip) {
     }
     if (in_array($ip, $fixedBindingIPs)) {
         $flag = (string)$flag . 'S';
+        if (!empty($mac) && isset($fixedBindingMap[$ip]) && strtolower($mac) !== $fixedBindingMap[$ip]) {
+            $flag = (string)$flag . 'X';
+        }
     }
     
     renderSubscriberRow($ip, $state, $mac, $flag, $hash, $extensive, $classesByHash, $ifbIf, $filtersByIP);

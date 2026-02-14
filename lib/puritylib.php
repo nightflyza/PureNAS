@@ -350,19 +350,42 @@ function getAllArpEntries() {
 }
 
 /**
- * Returns IPs that have a static IP+MAC binding (bridge fixed_ips set).
- * Empty when FW_BRIDGE_MACFIX is off or nft set is missing.
+ * Returns IPs that have a static IP+MAC binding (bridge or netdevice fixed_ips set).
+ * Empty when FW_BRIDGE_MACFIX is off or nft sets are missing.
  *
  * @return array
  */
 function getFixedBindingIPs() {
-    $cmd = 'nft list set bridge subscribers fixed_ips 2>/dev/null';
-    $output = shell_exec($cmd);
     $ips = array();
-    if (!empty($output) && preg_match_all('/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/', $output, $matches)) {
-        $ips = array_unique($matches[1]);
+    foreach (array('bridge subscribers fixed_ips', 'netdev subscribers fixed_ips') as $set) {
+        $output = shell_exec('nft list set ' . $set . ' 2>/dev/null');
+        if (!empty($output) && preg_match_all('/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/', $output, $matches)) {
+            $ips = array_merge($ips, $matches[1]);
+        }
     }
-    return $ips;
+    return array_unique($ips);
+}
+
+/**
+ * Returns IP => MAC map for static bindings (from fixed_clients set in bridge and netdev).
+ * Empty when FW_BRIDGE_MACFIX is off or sets are missing.
+ *
+ * @return array
+ */
+function getFixedBindingMap() {
+    $map = array();
+    foreach (array('bridge subscribers fixed_clients', 'netdev subscribers fixed_clients') as $set) {
+        $output = shell_exec('nft list set ' . $set . ' 2>/dev/null');
+        if (empty($output)) {
+            continue;
+        }
+        if (preg_match_all('/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*\.\s*([0-9a-f:]{17})\b/i', $output, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $map[$m[1]] = strtolower($m[2]);
+            }
+        }
+    }
+    return $map;
 }
 
 /**

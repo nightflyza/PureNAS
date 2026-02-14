@@ -189,18 +189,20 @@ function apiGetAllTcFilters($dev1, $dev2) {
 }
 
 /**
- * Returns IPs that have a static IP+MAC binding (bridge fixed_ips set) for REST API.
- * Uses sudo when not root. Empty when FW_BRIDGE_MACFIX is off or nft set is missing.
+ * Returns IPs that have a static IP+MAC binding (bridge or netdevice fixed_ips set) for REST API.
+ * Uses sudo when not root. Empty when FW_BRIDGE_MACFIX is off or nft sets are missing.
  *
  * @return array
  */
 function apiGetFixedBindingIPs() {
-    $output = sudoRun('nft list set bridge subscribers fixed_ips 2>/dev/null');
     $ips = array();
-    if (!empty($output) && preg_match_all('/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/', $output, $matches)) {
-        $ips = array_unique($matches[1]);
+    foreach (array('bridge subscribers fixed_ips', 'netdev subscribers fixed_ips') as $set) {
+        $output = sudoRun('nft list set ' . $set . ' 2>/dev/null');
+        if (!empty($output) && preg_match_all('/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/', $output, $matches)) {
+            $ips = array_merge($ips, $matches[1]);
+        }
     }
-    return $ips;
+    return array_unique($ips);
 }
 
 /**
