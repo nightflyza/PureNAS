@@ -5,14 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../purenas.conf"
 
 if [ -z "$1" ]; then
-    echo "Usage: $0 <IP_ADDRESS>" >&2
+    echo "Usage: $0 <IP_ADDRESS|CIDR>" >&2
     exit 1
 fi
 
 IP="$1"
 
 nft list set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts >/dev/null 2>&1 || {
-    nft add set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts '{ type ipv4_addr; }'
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts '{ type ipv4_addr; flags interval; }'
 }
 
 nft add element ${NFT_FAMILY} ${NFT_TABLE} banned_hosts { ${IP} } 2>/dev/null || {

@@ -172,11 +172,11 @@ Only these DNS servers are allowed to be used for DNS resolution if set by any s
 
 ### `BANNED_HOSTS`
 
-IP addresses that are blocked without any exceptions. All traffic to/from these IPs will be dropped regardless of other rules. Multiple IP addresses can be specified.
+IP addresses or CIDR prefixes that are blocked without any exceptions. All traffic to/from these will be dropped regardless of other rules. Multiple entries can be specified.
 
-**Format**: Space-separated list of IP addresses
+**Format**: Space-separated list of IPv4 addresses or CIDRs (e.g. `/24`, `/16`)
 
-**Example**: `BANNED_HOSTS="1.2.3.4"` or `BANNED_HOSTS="10.0.0.100 192.168.1.50"`
+**Example**: `BANNED_HOSTS="1.2.3.4"` or `BANNED_HOSTS="10.0.0.100 192.168.1.0/24"`
 
 ## Port Blocking
 

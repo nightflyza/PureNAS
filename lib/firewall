@@ -43,7 +43,7 @@ fi
 
 echo "== Configuring banned hosts =="
 nft list set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts >/dev/null 2>&1 || \
-    nft add set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts '{ type ipv4_addr; }'
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts '{ type ipv4_addr; flags interval; }'
 nft flush set ${NFT_FAMILY} ${NFT_TABLE} banned_hosts 2>/dev/null || true
 if [ -n "${BANNED_HOSTS:-}" ]; then
     for ip in ${BANNED_HOSTS}; do

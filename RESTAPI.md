@@ -55,14 +55,16 @@ GET /api/subscriber/unmac/172.16.0.4
 
 ### IP Ban Management
 
-**Ban IP address**
+**Ban IP or CIDR**
 ```
 GET /api/ip/ban/1.2.3.4
+GET /api/ip/ban/10.0.0.0/24
 ```
 
-**Unban IP address**
+**Unban IP or CIDR**
 ```
 GET /api/ip/unban/1.2.3.4
+GET /api/ip/unban/10.0.0.0/24
 ```
 
 ### System Information

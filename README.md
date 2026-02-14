@@ -98,8 +98,8 @@ git clone https://github.com/nightflyza/PureNAS.git /etc/PureNAS
 4. **Manage firewall rules**:
    ```bash
    # Block/unblock IP addresses
-   /etc/PureNAS/actions/ip_ban <IP_ADDRESS>
-   /etc/PureNAS/actions/ip_unban <IP_ADDRESS>
+   /etc/PureNAS/actions/ip_ban <IP_ADDRESS|CIDR>
+   /etc/PureNAS/actions/ip_unban <IP_ADDRESS|CIDR>
 
    # Allow/disallow DNS servers
    /etc/PureNAS/actions/dns_allow <DNS_IP_ADDRESS>
@@ -257,8 +257,8 @@ it upgrades and removes everything except your purenas.conf main config file.
     ├── subscriber_arp        # Legacy: calls subscriber_mac
     ├── subscriber_unarp      # Legacy: calls subscriber_unmac
     ├── subscribers_show      # List all active subscribers
-    ├── ip_ban                # Set an IP address to block list
-    ├── ip_unban              # Remove an IP address from block list
+    ├── ip_ban                # Add IP or CIDR to block list
+    ├── ip_unban              # Remove IP or CIDR from block list
     ├── dns_allow             # Allow DNS server
     ├── dns_disallow          # Disallow DNS server
     ├── portinc_block         # Block incoming port to users network
