@@ -23,9 +23,7 @@ if [ "${FW_MACFIX:-NO}" = "YES" ]; then
     echo "== Added IP+MAC static entry: ${IP} . ${MAC_LOWER} =="
 fi
 
-if [ "${DISABLE_ARPFIX:-NO}" = "YES" ]; then
-    echo "== DISABLE_ARPFIX is set, skipping static ARP for ${IP} =="
-else
+if [ "${DISABLE_ARPFIX:-NO}" != "YES" ]; then
     ${arpcmd} -s ${IP} ${MAC}
     echo "== Added static ARP entry for ${IP} with MAC ${MAC} =="
 fi

@@ -26,9 +26,7 @@ if [ "${FW_MACFIX:-NO}" = "YES" ]; then
     fi
 fi
 
-if [ "${DISABLE_ARPFIX:-NO}" = "YES" ]; then
-    echo "== DISABLE_ARPFIX is set, skipping static ARP remove for ${IP} =="
-else
+if [ "${DISABLE_ARPFIX:-NO}" != "YES" ]; then
     ${arpcmd} -d ${IP}
     echo "== Removed static ARP entry for ${IP} =="
 fi
