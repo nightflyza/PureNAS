@@ -49,8 +49,6 @@ if (!empty($config['REST_API_KEY'])) {
 // Handle different API actions
 $action = ubRouting::get('subscriber', 'safe');
 $ipAction = ubRouting::get('ip', 'safe');
-$macAction = ubRouting::get('mac_ip', 'safe');
-$unmacAction = ubRouting::get('unmac', 'safe');
 $systemAction = ubRouting::get('system', 'safe');
 
 // Handle subscriber actions
@@ -133,11 +131,9 @@ if ($action === 'unshape') {
     exit();
 }
 
-// Handle IP+MAC binding
-if (!empty($macAction)) {
-    $ip = $macAction;
+if ($action === 'mac') {
+    $ip = ubRouting::get('ip', 'safe');
     $mac = ubRouting::get('mac', 'safe');
-    
     if (empty($ip)) {
         apiResponse(array('error' => 'IP address is required'));
         exit();
@@ -154,15 +150,13 @@ if (!empty($macAction)) {
         apiResponse(array('error' => 'Invalid MAC address format'));
         exit();
     }
-    
     $result = apiExecuteAction('actions/subscriber_mac', array($ip, $mac));
     apiResponse($result);
     exit();
 }
 
-if (!empty($unmacAction)) {
-    $ip = $unmacAction;
-    
+if ($action === 'unmac') {
+    $ip = ubRouting::get('ip', 'safe');
     if (empty($ip)) {
         apiResponse(array('error' => 'IP address is required'));
         exit();
@@ -171,7 +165,6 @@ if (!empty($unmacAction)) {
         apiResponse(array('error' => 'Invalid IP address format'));
         exit();
     }
-    
     $result = apiExecuteAction('actions/subscriber_unmac', array($ip));
     apiResponse($result);
     exit();

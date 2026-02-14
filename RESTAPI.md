@@ -45,12 +45,12 @@ GET /api/subscriber/unshape/172.16.0.4
 
 **Add IP+MAC binding** (static ARP and/or FW_MACFIX)
 ```
-GET /api/mac/172.16.0.4/aa:bb:cc:dd:ee:ff
+GET /api/subscriber/mac/172.16.0.4/aa:bb:cc:dd:ee:ff
 ```
 
 **Remove IP+MAC binding**
 ```
-GET /api/unmac/172.16.0.4
+GET /api/subscriber/unmac/172.16.0.4
 ```
 
 ### IP Ban Management
