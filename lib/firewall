@@ -209,11 +209,7 @@ if [ "${FW_MACFIX:-NO}" = "YES" ]; then
         else
             nft add chain ${NFT_FAMILY} ${NFT_TABLE} prerouting_mac '{ type filter hook prerouting priority -300; policy accept; }'
         fi
-        if [ "${DEFAULT_USER_BLOCK}" = "YES" ]; then
-            nft add rule ${NFT_FAMILY} ${NFT_TABLE} prerouting_mac iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients ip saddr @${NFT_ACTIVE_SET} accept 2>/dev/null || true
-        else
-            nft add rule ${NFT_FAMILY} ${NFT_TABLE} prerouting_mac iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
-        fi
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} prerouting_mac iifname "${USER_GW_IF}" ip saddr . ether saddr @fixed_clients accept 2>/dev/null || true
         nft add rule ${NFT_FAMILY} ${NFT_TABLE} prerouting_mac iifname "${USER_GW_IF}" ip saddr @fixed_ips drop 2>/dev/null || true
     fi
 fi
