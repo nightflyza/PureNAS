@@ -14,6 +14,7 @@ if [ -z "$IP" ] || [ -z "$MAC" ]; then
 fi
 
 if [ "${FW_MACFIX:-NO}" = "YES" ]; then
+    "${SCRIPT_DIR}/subscriber_unmac" "${IP}" || true
     MAC_LOWER="$(echo "$MAC" | tr 'A-F' 'a-f')"
     nft add element ${NFT_FAMILY} ${NFT_TABLE} fixed_clients { "${IP}" . "${MAC_LOWER}" } 2>/dev/null || {
         echo "Error: Failed to add ${IP} . ${MAC_LOWER} static entry" >&2
