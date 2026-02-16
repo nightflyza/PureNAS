@@ -279,13 +279,14 @@ it upgrades and removes everything except your purenas.conf main config file.
 ### Firewall scheme
 
 ```
-[Packet] ──┬──> [INPUT] ──> Est/Rel? ──> Banned? ──> Protected Port? ──┬──> Safe Zone? ──> [Accept]
-           │                                                           └──> Not Safe ──> [Drop]
-           │
-           └──> [FORWARD] ──> Banned? ──> Est/Rel? ──> DNS? ──> Allowed Always?
-                                                                    │
-                                                                    v
-                                            Isolation? ──> Blocked Ports? ──> Active? ──> [Accept/Drop]
+[Packet] --> [PREROUTING] --> MAC? --> DNS spoof? --> [routing]
+     │
+     ├--> [INPUT] --> Est/Rel? --> Banned? --> Banned ICMP? --> Protected? --> Safe? --> [Accept/Drop]
+     │
+     └--> [FORWARD] --> Banned? --> Banned ICMP? --> Est/Rel? --> DNS? --> Allowed? --> Isolation? --> Ports? --> Active? --> [Accept/Drop]
+              │
+              v
+         [POSTROUTING] --> SNAT
 ```
 
 ### Scheme of the tc hash structure
@@ -315,43 +316,6 @@ it upgrades and removes everything except your purenas.conf main config file.
  │                              └─ ...
  │
  └─ default (no match)  ──► 1:ffff
-```
-
-```
-                    ┌─────────────────────────────────────────────────────────────────┐
-                    │  ROOT: parent 1:0 (HTB root class)                              │
-                    └─────────────────────────────────────────────────────────────────┘
-                                                │
-                    pref 1  u32  ht 800::   match ip src/dst 172.16.0.0/16
-                                    │       hashkey mask 0x0000ff00 at 12/16 (3rd octet)
-                                    ▼
-                    ┌─────────────────────────────────────────────────────────────────┐
-                    │  LEVEL 1: handle 999:   divisor 256  →  256 buckets             │
-                    │  999:00  999:01  999:02  ...  999:0a  ...  999:ff               │
-                    │            bucket index = 3rd octet of IP (0–255)               │
-                    └─────────────────────────────────────────────────────────────────┘
-                        │       │              │
-                        │       │              └── 999:0a  ←  when 3rd octet = 10
-                        │       │
-          pref 2  for each i in 0..255:
-                    ht 999:HEX:  match ip src/dst 172.16.i.0/24
-                                 hashkey mask 0x000000ff at 12/16 (4th octet)
-                                 link → handle (i+1) in hex  e.g. 0b: for i=10
-                                    ▼
-                    ┌─────────────────────────────────────────────────────────────────┐
-                    │  LEVEL 2: handle 01:, 02:, ... 0b:, ... 100:   (256 tables)     │
-                    │  Each TABLE_ID has divisor 256  →  256 buckets                  │
-                    │  e.g. 0b:00  0b:01  ...  0b:32  ...  0b:ff                      │
-                    │              bucket index = 4th octet of IP (0–255)             │
-                    └─────────────────────────────────────────────────────────────────┘
-                                                        │
-                                    subscriber_shape adds per-IP filter here:
-                                    handle 0b:32:FILTER_ID  match ip src/dst 172.16.10.50/32
-                                                            flowid 1:CLASSID
-                                    ▼
-                    ┌─────────────────────────────────────────────────────────────────┐
-                    │  HTB class 1:CLASSID  (rate/ceil)  →  fq_codel                  │
-                    └─────────────────────────────────────────────────────────────────┘
 ```
 
 

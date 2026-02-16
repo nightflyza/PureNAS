@@ -66,7 +66,7 @@ Name of the bridge interface to create and use for user network interactions.
 
 **Format**: Bridge interface name
 
-**Example**: `BRIDGE_NAME="br0"` or `BRIDGE_NAME="br-users"`
+**Example**: `BRIDGE_NAME="br0"`
 
 ### `BRIDGE_MAC`
 
@@ -237,7 +237,7 @@ Intermediate Functional Block (IFB) interface name used for ingress traffic shap
 
 **Format**: Interface name starting with `ifb`
 
-**Example**: `IFB_IF="ifb0"` or `IFB_IF="ifb1"`
+**Example**: `IFB_IF="ifb0"`
 
 ## NAT Configuration
 
@@ -445,7 +445,7 @@ Override zero speed with this value (in kbit/s). This value is used when a subsc
 
 ### `DISABLE_ARPFIX`
 
-Disable use of static ARP (`arp -s` / `arp -d`) for subscriber IP-MAC binding. When set to `YES`, `subscriber_mac` (and legacy `subscriber_arp`) do not run `arp -s` / `arp -d`.
+Disable use of static ARP  for subscriber IP-MAC binding.
 
 **Format**: `YES` or `NO` (default: `NO`)
 
@@ -453,7 +453,7 @@ Disable use of static ARP (`arp -s` / `arp -d`) for subscriber IP-MAC binding. W
 
 ### `FW_MACFIX`
 
-When set to `YES`, enables IP+MAC enforcement via nftables on the user gateway interface. Uses table `inet`/`NFT_TABLE`: sets `fixed_clients`, `fixed_ips` and rules in the input chain (same for bridge and physical interface). Traffic from hosts without a binding is accepted by default. For IPs that have a binding in `fixed_clients`, traffic is accepted only when the source MAC matches the fixed one; otherwise it is dropped. `subscriber_mac` adds (IP, MAC) to `fixed_clients` and the IP to `fixed_ips`; `subscriber_unmac` removes them.
+When set to `YES`, enables IP+MAC enforcement via nftables on the user gateway interface.
 
 **Format**: `YES` or `NO` (default: `NO`)
 
