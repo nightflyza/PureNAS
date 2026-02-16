@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+awk -F'src=' '{if (NF>1) print $2}' /proc/net/nf_conntrack \
+| cut -d' ' -f1 \
+| sort \
+| uniq -c \
+| sort -nr \
+| head
+
