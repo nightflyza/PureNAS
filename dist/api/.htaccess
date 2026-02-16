@@ -9,8 +9,10 @@ RewriteRule ^subscriber/shape/([0-9\.]+)/([0-9]+)/([0-9]+)$ index.php?subscriber
 RewriteRule ^subscriber/unshape/([0-9\.]+)$ index.php?subscriber=unshape&ip=$1 [L,QSA]
 RewriteRule ^subscriber/mac/([0-9\.]+)/([0-9a-fA-F:]+)$ index.php?subscriber=mac&ip=$1&mac=$2 [L,QSA]
 RewriteRule ^subscriber/unmac/([0-9\.]+)$ index.php?subscriber=unmac&ip=$1 [L,QSA]
-RewriteRule ^ip/ban/([0-9\.]+(\/[0-9]+)?)$ index.php?ip=ban&addr=$1 [L,QSA]
-RewriteRule ^ip/unban/([0-9\.]+(\/[0-9]+)?)$ index.php?ip=unban&addr=$1 [L,QSA]
+RewriteRule ^ban/ip/([0-9\.]+(\/[0-9]+)?)$ index.php?action=ban&type=ip&addr=$1 [L,QSA]
+RewriteRule ^unban/ip/([0-9\.]+(\/[0-9]+)?)$ index.php?action=unban&type=ip&addr=$1 [L,QSA]
+RewriteRule ^ban/icmp/([0-9\.]+(\/[0-9]+)?)$ index.php?action=ban&type=icmp&addr=$1 [L,QSA]
+RewriteRule ^unban/icmp/([0-9\.]+(\/[0-9]+)?)$ index.php?action=unban&type=icmp&addr=$1 [L,QSA]
 RewriteRule ^system/info$ index.php?system=info [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <IP_ADDRESS|CIDR>" >&2
+    exit 1
+fi
+
+IP="$1"
+
+nft list set ${NFT_FAMILY} ${NFT_TABLE} banned_icmp >/dev/null 2>&1 || {
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} banned_icmp '{ type ipv4_addr; flags interval; }'
+}
+
+nft add element ${NFT_FAMILY} ${NFT_TABLE} banned_icmp { ${IP} } 2>/dev/null || {
+    echo "Error: Failed to add ${IP} to banned_icmp set" >&2
+    exit 1
+}
+
+echo "== ICMP banned for ${IP} =="

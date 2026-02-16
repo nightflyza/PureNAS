@@ -24,4 +24,3 @@ conntrack -D -s ${IP} >/dev/null 2>&1 || true
 conntrack -D -d ${IP} >/dev/null 2>&1 || true
 
 echo "== Banned ${IP} =="
-

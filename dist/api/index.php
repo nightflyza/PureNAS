@@ -48,7 +48,8 @@ if (!empty($config['REST_API_KEY'])) {
 
 // Handle different API actions
 $action = ubRouting::get('subscriber', 'safe');
-$ipAction = ubRouting::get('ip', 'safe');
+$banAction = ubRouting::get('action', 'safe');
+$banType = ubRouting::get('type', 'safe');
 $systemAction = ubRouting::get('system', 'safe');
 
 // Handle subscriber actions
@@ -177,33 +178,19 @@ if ($systemAction === 'info') {
     exit();
 }
 
-// Handle IP ban/unban actions
-if ($ipAction === 'ban') {
+// Handle ban/unban actions: /api/ban/ip/..., /api/unban/icmp/...
+if (in_array($banAction, array('ban', 'unban')) && in_array($banType, array('ip', 'icmp'))) {
     $addr = ubRouting::get('addr', 'safe');
     if (empty($addr)) {
-        apiResponse(array('error' => 'IP address is required'));
+        apiResponse(array('error' => 'IP or CIDR address is required'));
         exit();
     }
     if (!apiValidateIP($addr)) {
-        apiResponse(array('error' => 'Invalid IP address format'));
+        apiResponse(array('error' => 'Invalid IP or CIDR format'));
         exit();
     }
-    $result = apiExecuteAction('actions/ip_ban', array($addr));
-    apiResponse($result);
-    exit();
-}
-
-if ($ipAction === 'unban') {
-    $addr = ubRouting::get('addr', 'safe');
-    if (empty($addr)) {
-        apiResponse(array('error' => 'IP address is required'));
-        exit();
-    }
-    if (!apiValidateIP($addr)) {
-        apiResponse(array('error' => 'Invalid IP address format'));
-        exit();
-    }
-    $result = apiExecuteAction('actions/ip_unban', array($addr));
+    $script = 'actions/' . $banAction . '_' . $banType;
+    $result = apiExecuteAction($script, array($addr));
     apiResponse($result);
     exit();
 }

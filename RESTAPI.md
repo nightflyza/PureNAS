@@ -53,18 +53,30 @@ GET /api/subscriber/mac/172.16.0.4/aa:bb:cc:dd:ee:ff
 GET /api/subscriber/unmac/172.16.0.4
 ```
 
-### IP Ban Management
+### Ban / Unban (IP and ICMP)
 
-**Ban IP or CIDR**
+**Ban IP or CIDR** (full block)
 ```
-GET /api/ip/ban/1.2.3.4
-GET /api/ip/ban/10.0.0.0/24
+GET /api/ban/ip/1.2.3.4
+GET /api/ban/ip/10.0.0.0/24
 ```
 
 **Unban IP or CIDR**
 ```
-GET /api/ip/unban/1.2.3.4
-GET /api/ip/unban/10.0.0.0/24
+GET /api/unban/ip/1.2.3.4
+GET /api/unban/ip/10.0.0.0/24
+```
+
+**Ban ICMP** for IP or CIDR
+```
+GET /api/ban/icmp/1.2.3.4
+GET /api/ban/icmp/10.0.0.0/24
+```
+
+**Unban ICMP**
+```
+GET /api/unban/icmp/1.2.3.4
+GET /api/unban/icmp/10.0.0.0/24
 ```
 
 ### System Information

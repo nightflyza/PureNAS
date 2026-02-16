@@ -20,8 +20,8 @@ for ($i = 1; $i < $argc; $i++) {
         echo "  terse      - list active subscriber IPs, one per line\n";
         echo "  extensive  - show full table (CLASSID, BUCKET, RATES, etc.)\n";
         echo "  top        - order by traffic (hits) descending\n";
-        echo "  help       - this help\n";
-        echo "FLAG: P=permanent R=reachable I=incomplete D=delay S=static binding X=MAC mismatch with binding\n";
+        echo "  help       - this help\n\n";
+        echo "FLAGs: P=permanent R=reachable I=incomplete D=delay S=static binding X=MAC mismatch with binding\n";
         exit(0);
     }
 }

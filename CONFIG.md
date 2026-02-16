@@ -191,6 +191,14 @@ IP addresses or CIDR prefixes that are blocked without any exceptions. All traff
 
 **Example**: `BANNED_HOSTS="1.2.3.4"` or `BANNED_HOSTS="10.0.0.100 192.168.1.0/24"`
 
+### `BANNED_ICMP`
+
+IP addresses or CIDR prefixes for which only ICMP traffic is blocked (to and from). Other traffic is unaffected. Multiple entries can be specified. Also manageable via `actions/ban_icmp` and `actions/unban_icmp`.
+
+**Format**: Space-separated list of IPv4 addresses or CIDRs
+
+**Example**: `BANNED_ICMP=""` or `BANNED_ICMP="1.2.3.4 10.0.0.0/24"`
+
 ## Port Blocking
 
 ### `BLOCKED_INCOMING_PORTS`
