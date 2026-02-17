@@ -17,25 +17,30 @@ if [ "${SFLOW_SENSOR_ENABLED}" = "YES" ]; then
         fi
         SAMPLING_RATE=${SFLOW_SAMPLING_RATE}
 
+        COLLECTOR_BLOCKS=""
+        for COLLECTOR_IP in ${SFLOW_COLLECTOR}; do
+            COLLECTOR_BLOCKS="${COLLECTOR_BLOCKS}
+ collector {
+   ip = ${COLLECTOR_IP}
+   udpport = ${SFLOW_PORT}
+   }
+"
+        done
+
         echo "
 sflow {
  DNSSD = off
  polling = 20
  sampling = ${SFLOW_SAMPLING_RATE}
-
- collector {
-   ip = ${SFLOW_COLLECTOR}
-   udpport = ${SFLOW_PORT}
-   }
-
+${COLLECTOR_BLOCKS}
    pcap {
     dev = ${SENSOR_IF}
    }
  }
        " > /etc/hsflowd.conf
-        
+
         echo "== Configuring sFlow sensor on ${SENSOR_IF} =="
-        
+
         killall hsflowd >/dev/null 2>&1 || true
         while pgrep -x hsflowd >/dev/null 2>&1; do
             echo "== Waiting for hsflowd to shutdown if it is running... =="
@@ -43,6 +48,6 @@ sflow {
         done
         rm -f /var/run/hsflowd.pid >/dev/null 2>&1 || true
         hsflowd -f /etc/hsflowd.conf >/dev/null 2>&1 || true
-        echo "== sFlow sensor started export to ${SFLOW_COLLECTOR}:${SFLOW_PORT} =="
+        echo "== sFlow sensor started export to collector: ${SFLOW_COLLECTOR} (port ${SFLOW_PORT}) =="
     fi
 fi

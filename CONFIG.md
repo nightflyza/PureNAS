@@ -311,11 +311,11 @@ sFlow sampling rate. Higher values mean less sampling (more packets analyzed). L
 
 ### `SFLOW_COLLECTOR`
 
-IP address of the sFlow collector server that will receive the flow data.
+IP address(es) of the sFlow collector server(s) that will receive the flow data. Multiple collectors can be specified as a space-separated list.
 
-**Format**: IP address
+**Format**: IP address, or space-separated list of IP addresses
 
-**Example**: `SFLOW_COLLECTOR="192.168.0.223"` or `SFLOW_COLLECTOR="10.0.0.100"`
+**Example**: `SFLOW_COLLECTOR="192.168.0.223"` or `SFLOW_COLLECTOR="192.168.0.25 192.168.0.27"`
 
 ### `SFLOW_PORT`
 
