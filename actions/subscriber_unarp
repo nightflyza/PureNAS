@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# Legacy wrapper: use subscriber_unmac to remove IP+MAC binding.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "${SCRIPT_DIR}/subscriber_unmac" "$@"

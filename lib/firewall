@@ -13,11 +13,11 @@ nft flush table ${NFT_FAMILY} ${NFT_TABLE} 2>/dev/null || true
 nft add table ${NFT_FAMILY} ${NFT_TABLE}
 
 nft list set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} >/dev/null 2>&1 || \
-    nft add set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} '{ type ipv4_addr; flags interval; }'
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} '{ type ipv4_addr; }'
 nft flush set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} 2>/dev/null || true
 
 nft list set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_INACTIVE_SET} >/dev/null 2>&1 || \
-    nft add set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_INACTIVE_SET} '{ type ipv4_addr; flags interval; }'
+    nft add set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_INACTIVE_SET} '{ type ipv4_addr; }'
 nft flush set ${NFT_FAMILY} ${NFT_TABLE} ${NFT_INACTIVE_SET} 2>/dev/null || true
 
 if [ "${FW_MACFIX:-NO}" = "YES" ]; then

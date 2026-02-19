@@ -8,5 +8,5 @@
 - REST API: better subscribers management behavior.
 - Actions renamed: ip_ban/ip_unban => ban_ip/unban_ip, icmp_ban/icmp_unban => ban_icmp/unban_icmp.
 - subscribers_show: optional 'help'; FLAG X when MAC in ARP differs from static binding (S).
-- actions: subscriber_arp/unarp renamed to subscriber_mac/unmac; legacy wrappers kept.
+- actions: subscriber_arp/unarp removed; use subscriber_mac/unmac instead.
 

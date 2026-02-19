@@ -259,8 +259,6 @@ it upgrades and removes everything except your purenas.conf main config file.
     ├── subscriber_unshape    # Remove bandwidth limits from subscriber
     ├── subscriber_mac        # Add subscriber IP+MAC binding (ARP and/or FW_MACFIX)
     ├── subscriber_unmac      # Remove subscriber IP+MAC binding
-    ├── subscriber_arp        # Legacy: calls subscriber_mac
-    ├── subscriber_unarp      # Legacy: calls subscriber_unmac
     ├── subscribers_show      # List all active subscribers
     ├── ban_ip                # Add IP or CIDR to block list
     ├── unban_ip              # Remove IP or CIDR from block list

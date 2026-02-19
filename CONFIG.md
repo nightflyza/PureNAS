@@ -172,7 +172,7 @@ Only these DNS servers are allowed to be used for DNS resolution if set by any s
 
 ### `SPOOF_ANY_DNS`
 
-Redirect DNS traffic from user networks to this IP. Applied by `lib/dnsrepl` via prerouting DNAT. If set, only the first IP is used when multiple are given.
+Redirect DNS traffic from user networks to this IP.
 
 - **When `ALLOWED_ONLY_DNS` is set:** Only requests whose destination is *not* in `ALLOWED_ONLY_DNS` are redirected to `SPOOF_ANY_DNS`. Typically set `SPOOF_ANY_DNS` to one of the allowed DNS IPs so all client DNS is forced through it.
 - **When `ALLOWED_ONLY_DNS` is empty:** All DNS traffic from user networks (UDP/TCP port 53) is redirected to this IP.
