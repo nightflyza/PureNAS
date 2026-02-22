@@ -195,7 +195,7 @@ nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname
 if nft list chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet >/dev/null 2>&1; then
     nft flush chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet 2>/dev/null || true
 else
-    nft add chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet '{ policy return; }'
+    nft add chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet '{ policy accept; }'
 fi
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward jump forward_unauthdet 2>/dev/null || true
 
