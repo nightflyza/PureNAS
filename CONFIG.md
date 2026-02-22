@@ -459,6 +459,40 @@ When set to `YES`, enables IP+MAC enforcement via nftables on the user gateway i
 
 **Example**: `FW_MACFIX="YES"`
 
+## Unauthorized Client Detection
+
+Detection runs only on the LAN (user gateway) interface. When enabled, clients that are not in the allowed list and that send traffic matching the chosen trigger are recorded for a limited time. Authorizing a client with `subscriber_allow` also removes that client from the detection set.
+
+### `UNAUTH_DETECTION_ENABLED`
+
+Enable or disable unauthorized client detection on the LAN interface.
+
+**Format**: `YES` or `NO`
+
+### `UNAUTH_DETECTION_TRIGGER_MODE`
+
+Which traffic triggers detection: **DNS** (port 53), **PORTS** (use `UNAUTH_DETECTION_PORTS`), **ANY** (any traffic), or **DHCP** (UDP 67/68).
+
+**Format**: `DNS`, `PORTS`, `ANY`, or `DHCP`
+
+### `UNAUTH_DETECTION_PORTS`
+
+Destination ports that trigger detection when mode is **PORTS**. Ignored for other modes.
+
+**Format**: Space-separated port numbers (e.g. `53 80 443`)
+
+### `UNAUTH_DETECTION_TIMEOUT`
+
+How long (in seconds) a detected client stays in the detection set before expiring.
+
+**Format**: Integer (seconds). Example: `1800` (30 minutes).
+
+### `UNAUTH_DETECTION_MAX_ENTRIES`
+
+Maximum number of IPs that can be stored in the detection set at once.
+
+**Format**: Integer (e.g. `10000`).
+
 ## nftables Configuration
 
 These parameters are used for nftables configuration. **You should not modify these** unless you understand the implications and need to customize the firewall table structure.

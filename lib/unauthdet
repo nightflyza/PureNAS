@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../purenas.conf"
+
+if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
+    USER_GW_IF="${BRIDGE_NAME}"
+else
+    USER_GW_IF="${LAN_IF}"
+fi
+if [ -n "${USER_GW_IF:-}" ] && [ "${UNAUTH_DETECTION_ENABLED:-NO}" = "YES" ]; then
+
+echo "== Configuring unauthorized client detection on ${USER_GW_IF} =="
+UNAUTH_TIMEOUT="${UNAUTH_DETECTION_TIMEOUT:-1800}"
+UNAUTH_MODE="${UNAUTH_DETECTION_TRIGGER_MODE:-DNS}"
+
+case "${UNAUTH_MODE}" in
+    DNS)
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet iifname "${USER_GW_IF}" ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} tcp dport 53 add @waitauth_clients { ip saddr timeout ${UNAUTH_TIMEOUT}s } 2>/dev/null || true
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet iifname "${USER_GW_IF}" ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} udp dport 53 add @waitauth_clients { ip saddr timeout ${UNAUTH_TIMEOUT}s } 2>/dev/null || true
+        ;;
+    PORTS)
+        nft list set ${NFT_FAMILY} ${NFT_TABLE} unauth_trigger_ports >/dev/null 2>&1 || \
+            nft add set ${NFT_FAMILY} ${NFT_TABLE} unauth_trigger_ports '{ type inet_service; }'
+        nft flush set ${NFT_FAMILY} ${NFT_TABLE} unauth_trigger_ports 2>/dev/null || true
+        if [ -n "${UNAUTH_DETECTION_PORTS:-}" ]; then
+            for port in ${UNAUTH_DETECTION_PORTS}; do
+                nft add element ${NFT_FAMILY} ${NFT_TABLE} unauth_trigger_ports { ${port} } 2>/dev/null || true
+            done
+        fi
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet iifname "${USER_GW_IF}" ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} tcp dport @unauth_trigger_ports add @waitauth_clients { ip saddr timeout ${UNAUTH_TIMEOUT}s } 2>/dev/null || true
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet iifname "${USER_GW_IF}" ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} udp dport @unauth_trigger_ports add @waitauth_clients { ip saddr timeout ${UNAUTH_TIMEOUT}s } 2>/dev/null || true
+        ;;
+    ANY)
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet iifname "${USER_GW_IF}" ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} add @waitauth_clients { ip saddr timeout ${UNAUTH_TIMEOUT}s } 2>/dev/null || true
+        ;;
+    DHCP)
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet iifname "${USER_GW_IF}" ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} udp dport 67 add @waitauth_clients { ip saddr timeout ${UNAUTH_TIMEOUT}s } 2>/dev/null || true
+        nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet iifname "${USER_GW_IF}" ip saddr @users_networks ip saddr != @${NFT_ACTIVE_SET} udp dport 68 add @waitauth_clients { ip saddr timeout ${UNAUTH_TIMEOUT}s } 2>/dev/null || true
+        ;;
+    *)
+        echo "== Unknown UNAUTH_DETECTION_TRIGGER_MODE '${UNAUTH_MODE}', skipping detection rules =="
+        ;;
+esac
+
+fi

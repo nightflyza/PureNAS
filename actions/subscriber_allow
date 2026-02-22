@@ -18,5 +18,9 @@ nft add element ${NFT_FAMILY} ${NFT_TABLE} ${NFT_ACTIVE_SET} { ${IP} } 2>/dev/nu
     exit 1
 }
 
+if [ "${UNAUTH_DETECTION_ENABLED:-NO}" = "YES" ]; then
+    nft delete element ${NFT_FAMILY} ${NFT_TABLE} waitauth_clients { ${IP} } 2>/dev/null || true
+fi
+
 echo "== Added ${IP} to ${NFT_ACTIVE_SET} set =="
 
