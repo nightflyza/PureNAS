@@ -44,6 +44,6 @@ case "${UNAUTH_MODE}" in
         ;;
 esac
 
+    # Ensure chain returns to forward when no rule matches
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet return 2>/dev/null || true
 fi
-
-nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet return 2>/dev/null || true

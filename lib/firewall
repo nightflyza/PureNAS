@@ -136,6 +136,16 @@ nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip daddr @banned_icmp ip protoco
 
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ct state established,related accept 2>/dev/null || true
 
+if [ "${UNAUTH_DETECTION_ENABLED:-NO}" = "YES" ]; then
+    # Jump to unauthdet chain before any accept rules (so unauthorized clients are detected)
+    if nft list chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet >/dev/null 2>&1; then
+        nft flush chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet 2>/dev/null || true
+    else
+        nft add chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet
+    fi
+    nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward jump forward_unauthdet 2>/dev/null || true
+fi
+
 if [ -n "${ALLOWED_ONLY_DNS:-}" ]; then
     echo "== Configuring DNS restrictions for user network =="
     nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport 53 ip daddr @allowed_dns accept 2>/dev/null || true
@@ -190,14 +200,6 @@ if [ -n "${BLOCKED_OUTGOING_PORTS:-}" ]; then
 fi
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" tcp dport @outport_blocked drop 2>/dev/null || true
 nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" udp dport @outport_blocked drop 2>/dev/null || true
-
-# Jump to unauthdet chain (filled by lib/unauthdet when run from init after this script)
-if nft list chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet >/dev/null 2>&1; then
-    nft flush chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet 2>/dev/null || true
-else
-    nft add chain ${NFT_FAMILY} ${NFT_TABLE} forward_unauthdet
-fi
-nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward jump forward_unauthdet 2>/dev/null || true
 
 if [ "${DEFAULT_USER_BLOCK}" = "YES" ]; then
     nft add rule ${NFT_FAMILY} ${NFT_TABLE} forward ip saddr @users_networks oifname "${WAN_IF}" ip saddr @${NFT_ACTIVE_SET} accept 2>/dev/null || true
