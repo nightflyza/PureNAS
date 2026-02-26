@@ -29,7 +29,7 @@ if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
         VLAN_TO=$((VLAN_FROM + VLAN_COUNT - 1))
 
         for i in $(seq ${VLAN_FROM} ${VLAN_TO}); do
-            VLAN_IF="${LAN_IF}.${i}"
+            VLAN_IF="vlan${i}"
 
             if ! ip link show "${VLAN_IF}" >/dev/null 2>&1; then
                 echo "== Creating implicit VLAN ${VLAN_IF} =="
@@ -46,7 +46,7 @@ if [ "${VLAN_BRIDGE_ENABLED}" = "YES" ]; then
     # Create explicit VLANs if specified
     if [ -n "${EXPLICT_VLANS:-}" ]; then
         for vlan_id in ${EXPLICT_VLANS}; do
-            VLAN_IF="${LAN_IF}.${vlan_id}"
+            VLAN_IF="vlan${vlan_id}"
 
             if ! ip link show "${VLAN_IF}" >/dev/null 2>&1; then
                 echo "== Creating explicit VLAN ${VLAN_IF} =="
