@@ -17,6 +17,16 @@ else
     fi
 fi
 
+if [ "${BYPASS_NAT_ENABLED}" = "YES" ] && [ -n "${BYPASS_NAT_NETS:-}" ]; then
+    echo "== Configuring BYPASS pools =="
+    nft list set ${NFT_FAMILY} ${NFT_TABLE} bypass_nat_net >/dev/null 2>&1 || \
+        nft add set ${NFT_FAMILY} ${NFT_TABLE} bypass_nat_net '{ type ipv4_addr; flags interval; }'
+    for net in ${BYPASS_NAT_NETS}; do
+        nft add element ${NFT_FAMILY} ${NFT_TABLE} bypass_nat_net { ${net} } 2>/dev/null || true
+    done
+    nft add rule inet firewall postrouting ip saddr @bypass_nat_net return;
+fi
+
 if [ "${POOL_NAT_ENABLED}" = "YES" ] && [ -n "${POOL_NAT_NETS:-}" ]; then
     echo "== Configuring SNAT pools =="
     for net in ${POOL_NAT_NETS}; do
