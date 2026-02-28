@@ -261,6 +261,15 @@ Network pools to use for NAT when `POOL_NAT_ENABLED=YES`. Traffic will be distri
 
 **Example**: `POOL_NAT_NETS="203.0.113.0/28 198.51.100.0/28"`
 
+### `BYPASS_NAT_ENABLED`
+
+Сonfiguration flag to allow selective address translation. Requires `NAT_ENABLED=YES` and `BYPASS_NAT_ENABLED=YES` and `BYPASS_NAT_NETS` to be configured. 
+Good option if you have REAIL ip for clients and don't want NAT they.
+
+**Format**: Space-separated list of networks in CIDR notation
+
+**Example**: `BYPASS_NAT_NETS="192.168.12.0/28 192.168.100.0/28"`
+
 ## NetFlow Sensor
 
 ### `NETFLOW_SENSOR_ENABLED`
