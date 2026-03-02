@@ -2,6 +2,7 @@ RewriteEngine On
 RewriteBase /api/
 
 RewriteRule ^subscriber/getall$ index.php?subscriber=getall [L,QSA]
+RewriteRule ^subscriber/getwaitauth$ index.php?subscriber=getwaitauth [L,QSA]
 RewriteRule ^subscriber/allow/([0-9\.]+)$ index.php?subscriber=allow&ip=$1 [L,QSA]
 RewriteRule ^subscriber/disallow/([0-9\.]+)$ index.php?subscriber=disallow&ip=$1 [L,QSA]
 RewriteRule ^subscriber/shape/([0-9\.]+)/([0-9]+)$ index.php?subscriber=shape&ip=$1&download=$2 [L,QSA]
