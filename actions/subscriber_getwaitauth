@@ -4,10 +4,6 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../purenas.conf"
 
-if [ "${UNAUTH_DETECTION_ENABLED:-NO}" != "YES" ]; then
-    exit 0
-fi
-
 declare -A ARP
 while read -r line; do
     ip="${line%% *}"
@@ -21,11 +17,9 @@ done < <(ip -4 neigh show 2>/dev/null || true)
 WAITAUTH_IPS=()
 raw=$(nft list set ${NFT_FAMILY} ${NFT_TABLE} waitauth_clients 2>/dev/null || true)
 if [ -n "$raw" ]; then
-    while read -r word; do
-        if [[ "$word" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            WAITAUTH_IPS+=( "$word" )
-        fi
-    done < <(echo "$raw" | tr ',{}' ' \n ')
+    while read -r ip; do
+        WAITAUTH_IPS+=( "$ip" )
+    done < <(echo "$raw" | grep -oE '\b[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\b' || true)
 fi
 
 sorted=($(printf '%s\n' "${WAITAUTH_IPS[@]}" | sort -u -V))
