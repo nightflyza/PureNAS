@@ -171,6 +171,23 @@ if ($action === 'unmac') {
     exit();
 }
 
+if ($action === 'getwaitauth') {
+    $result = apiExecuteAction('actions/subscriber_getwaitauth', array());
+    if (isset($result['error'])) {
+        apiResponse($result);
+        exit();
+    }
+    $waitauth = array();
+    $lines = array_filter(explode("\n", $result['output']));
+    foreach ($lines as $line) {
+        $parts = explode('-', $line, 2);
+        $mac = (isset($parts[1]) && $parts[1] !== '') ? $parts[1] : '';
+        $waitauth[] = array('ip' => $parts[0], 'mac' => $mac);
+    }
+    apiResponse(array('success' => $result['success'], 'waitauth' => $waitauth));
+    exit();
+}
+
 // Handle system info action
 if ($systemAction === 'info') {
     $result = apiGetSystemInfo();

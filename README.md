@@ -92,6 +92,9 @@ git clone https://github.com/nightflyza/PureNAS.git /etc/PureNAS
    # View all active subscribers
    /etc/PureNAS/actions/subscribers_show [summary|terse|extensive|top|help]
 
+   # List unknown subscribers waiting for authorization (IP and MAC from ARP when available)
+   /etc/PureNAS/actions/subscriber_getwaitauth
+
    # Check some subscriber access info
    /etc/PureNAS/actions/uc [IP_ADDRESS]
    ```
@@ -260,6 +263,7 @@ it upgrades and removes everything except your purenas.conf main config file.
     ├── subscriber_mac        # Add subscriber IP+MAC binding (ARP and/or FW_MACFIX)
     ├── subscriber_unmac      # Remove subscriber IP+MAC binding
     ├── subscribers_show      # List all active subscribers
+    ├── subscriber_getwaitauth # List IPs waiting for auth (with MAC from ARP when available)
     ├── ban_ip                # Add IP or CIDR to block list
     ├── unban_ip              # Remove IP or CIDR from block list
     ├── ban_icmp              # Block ICMP to/from IP or CIDR

@@ -19,6 +19,12 @@ If specified as non empty in config, all API requests requires an API key passed
 GET /api/subscriber/getall
 ```
 
+**Get subscribers waiting for authorization**
+Returns IPs in the waitauth set (unknown subscribers) with MAC from local ARP when available. Requires `UNAUTH_DETECTION_ENABLED=YES`.
+```
+GET /api/subscriber/getwaitauth
+```
+
 **Allow subscriber**
 ```
 GET /api/subscriber/allow/172.16.0.4
@@ -113,3 +119,15 @@ All responses are JSON. Success responses contain data, error responses contain 
   "output": "== Added 172.16.0.4 to allowed_clients set =="
 }
 ```
+
+**subscriber/getwaitauth response:**
+```json
+{
+  "success": true,
+  "waitauth": [
+    { "ip": "172.16.0.50", "mac": "aa:bb:cc:dd:ee:ff" },
+    { "ip": "172.16.0.51", "mac": "" }
+  ]
+}
+```
+`mac` is empty string when not found in the local ARP table.
