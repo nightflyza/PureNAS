@@ -2,6 +2,8 @@
 
 ## 0.0.2
 - Changed VLAN interface naming convention (PR#1)
+- core_update action script now allows update to main brainch or to release tags
+- purenas.conf: new BYPASS_NAT_ENABLED and BYPASS_NAT_NETS options implemented (PR#2)
 
 ## 0.0.1
 - purenas.conf: SFLOW_COLLECTOR option now optionally can accep multiple sflow collectors IPs.
