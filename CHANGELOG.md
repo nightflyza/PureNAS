@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.2
+- Changed VLAN interface naming convention (PR#1)
+
+## 0.0.1
 - purenas.conf: SFLOW_COLLECTOR option now optionally can accep multiple sflow collectors IPs.
 - purenas.conf: SPOOF_ANY_DNS - redirect DNS from users to one IP.
 - purenas.conf: FW_MACFIX - optional IP+MAC binding using firewall on user gateway. Default NO.
