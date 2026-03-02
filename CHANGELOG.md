@@ -4,6 +4,8 @@
 - Changed VLAN interface naming convention (PR#1)
 - core_update action script now allows update to main brainch or to release tags
 - purenas.conf: new BYPASS_NAT_ENABLED and BYPASS_NAT_NETS options implemented (PR#2)
+- new action script subscriber_getwaitauth that returns list of subscribers waiting authorization
+- REST API: new subscriber/getwaitauth action that lists subscribers/mac waiting authorization
 
 ## 0.0.1
 - purenas.conf: SFLOW_COLLECTOR option now optionally can accep multiple sflow collectors IPs.
