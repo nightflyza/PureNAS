@@ -507,7 +507,7 @@ function apiGetSystemInfo() {
         'machine_arch' => $sysInfo->getMachineArch(),
         'php_version' => $sysInfo->getPhpVersion(),
         'cpu' => array(
-            'name' => $sysInfo->getCpuName(),
+            'name' => ubRouting::filters($sysInfo->getCpuName(),'safe'),
             'cores' => (int)$sysInfo->getCpuCores()
         ),
         'memory' => array(
