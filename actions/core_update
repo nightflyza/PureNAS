@@ -6,7 +6,7 @@ BRANCH="main"
 
 echo "Usage example:"
 echo "  $0          Update to current main branch"
-echo "  $0 001      Update to release tag (e.g. 001, 002)"
+echo "  $0 001      Update to specific release tag (e.g. 001, 002..)"
 echo ""
 
 RELEASE_TAG="${1:-}"
