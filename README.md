@@ -27,7 +27,7 @@ Damn fast Linux-based IPoE NAS/BRAS/BNG implementation
 
 ## Initial setup 
 
-### Debian 13.2 Trixie
+### Debian 13.5 Trixie
 
 ```
 su -
@@ -37,17 +37,6 @@ apt install -y php8.4-cli php8.4-mysqli php8.4-mbstring php8.4-bcmath php8.4-cur
 apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev
 apt install -y autoconf libtool pkg-config libpcap-dev libnfnetlink-dev libbpf-dev libdbus-1-dev 
 apt install -y libvirt-dev libxml2-dev uuid-dev clang linux-cpupower elinks
-```
-
-
-### Ubuntu Server 25.10
-```
-sudo bash
-apt install -y ethtool net-tools conntrack tcpdump htop mtr-tiny curl
-apt install -y git expat libexpat1-dev build-essential softflowd snmpd snmp
-apt install -y php8.4-cli php8.4-mysqli php8.4-mbstring php8.4-bcmath php8.4-curl
-apt install -y autoconf libtool pkg-config libpcap-dev libnfnetlink-dev libbpf-dev libdbus-1-dev libvirt-dev libxml2-dev uuid-dev
-apt install -y build-essential libncurses-dev libssl-dev bc flex bison dwarves rsync libelf-dev clang
 ```
 
 ### Clone latest PureNAS snapshot
@@ -146,20 +135,8 @@ sysctl -p /etc/sysctl.d/99-nat-tuning.conf
 
 ## rscriptd setup
 
-### Debian 13.2
+### Debian Trixie
 ```
-wget http://ubilling.net.ua/stg/stg-2.409.tar.gz
-tar zxvf stg-2.409.tar.gz
-cd stg-2.409/projects/rscriptd/
-./build 
-/usr/bin/gmake install
-```
-
-### Ubuntu 25.10
-```
-export CC=/usr/bin/clang
-export CXX=/usr/bin/clang++
-export CXXFLAGS=-std=c++11
 wget http://ubilling.net.ua/stg/stg-2.409.tar.gz
 tar zxvf stg-2.409.tar.gz
 cd stg-2.409/projects/rscriptd/
@@ -332,5 +309,6 @@ it upgrades and removes everything except your purenas.conf main config file.
 
 - See [CONFIG.md](CONFIG.md) for detailed configuration options.
 - See [RESTAPI.md](RESTAPI.md) for detailed HTTP API description.
+- See [INSTALL_UBUNTU.md](INSTALL_UBUNTU.md) for Ubuntu installation notes (untested, volunteers welcome).
 - Integration with [Ubilling and rscriptd](https://wiki.ubilling.net.ua/doku.php?id=purenasrscriptd)
 - Based on [original UBRsciptdDebianNAS project](https://github.com/pautiina/UBRsciptdDebianNAS)
